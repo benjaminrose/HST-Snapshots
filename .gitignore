@@ -1,0 +1,12 @@
+#python
+*.pyc
+
+#general
+*.tar.gz
+*.numbers
+
+#fits files are too big
+*.fits
+
+#don't sync data
+data/*

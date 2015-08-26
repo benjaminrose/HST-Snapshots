@@ -1,0 +1,4 @@
+# Definitions of the elliptial shape of galaxies found from using sep & sigma=1
+# SN name, x, y, a, b, theta
+# str, pixel, pixel, pixel, pixel, radians
+1.415000000000000000e+03,1.076570801900170409e+03,1.047462582164830565e+03,3.972596359252929688e+01,2.476204872131347656e+01,1.292141199111938477e+00
