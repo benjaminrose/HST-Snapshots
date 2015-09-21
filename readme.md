@@ -1,9 +1,11 @@
 # Looking at local environment of Type Ia supernova hosts via Hubble Space Telescope
+
 Distance is the hardest thing to measure in Astronomy. Finding a standard candle, an object of known brightness, is a simple way to solve this. Type Ia supernova are our standard candles. This project is an attempt to look at the relationship of local galactic properties, available through HST, and the known scatter of Ia absolute magnitude. 
 
-This file is primarily for me to document what I have done, need to do, and my other thaughts. Secondary it is for others to look at this project and understand what is happening. For them, the most useful sections are [Procedure](#procedure), [Analysis Method](#analysis-method), and [Future Work](#future-work). 
+This file is primarily for me to document what I have done, need to do, and my other thoughts. Secondary it is for others to look at this project and understand what is happening. For them, the most useful sections are [Procedure](#procedure), [Analysis Method](#analysis-method), and [Future Work](#future-work). 
 
 ## Table of Contents
+
 * [Background](#background)
 * [Project Goals](#project-goal)
 * [Data](#data)
@@ -13,38 +15,45 @@ This file is primarily for me to document what I have done, need to do, and my o
 * [Future Work](#future-work)
 
 ## Background
+
 * Mass step (Childress 2013 is recent)
 * Mentality (Hayden 2013)
 * Local H$_{\alpha}$ (Rigault 2013)
 * Stuff in emails between Bryan & Peter (with me in there but not commenting.) In early spring 2015
 
 ## Project Goal
+
 SN are used in cosmology and need to be a standard candle, we need to remove all variance in their absolute magnitude. Host mass & metallicity have been seen to effect the absolute magnitude of SN, but intuition says it should be a local property not a global galactic property.
 
 ## Data
+
 ### Data can be found at 
+
 * HST data from proposals 
     * [11670](http://archive.stsci.edu/proposal_search.php?id=11670&mission=hst) for Cycle 17 and 
     * [12969](http://archive.stsci.edu/proposal_search.php?id=12969&mission=hst) for Cycle 20 
 * SDSS [transient info](http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html)
 
 ### Data description
+
 * .drz
     - final image after HST processing (astrodrizzel?)
 * .flt
     - This comes with two copies. These can be looked at to see each actual observation. But these will have cosmic ray hits and other imperfections. 
 
 ### Data issues
+
 | SN | Issue |
 |----|----|
-|SN13038| the host does not seem to exist. I am thinking about removing it form the analysis or performing its analyses by hand
-|SN19023| host seems to be far away
-|SN4019| does not seem to have a star in its field. I used a larger elipical galaxy as apposed to a small (& faint) almost point sized unknown in type galaxy to calculate the WCS shift.
-|SN6491| has a star on top of the host
-|SN6614| might have a "star" that is really a "galaxy", check SDSS object ID 1237663785282764968. Also SN6614 uses a galaxy for its WCS shift calibration.
-|SN8297| has a galaxy very far away and I do not think I found it with the code. Code says that I found something at `r < 300 pixels`
+|SN13038| the host does not seem to exist. I am thinking about removing it form the analysis or performing its analyses by hand |
+|SN19023| host seems to be far away |
+|SN4019| does not seem to have a star in its field. I used a larger elliptical galaxy as apposed to a small (& faint) almost point sized unknown in type galaxy to calculate the WCS shift. |
+|SN6491| has a star on top of the host |
+|SN6614| might have a "star" that is really a "galaxy", check SDSS object ID 1237663785282764968. Also SN6614 uses a galaxy for its WCS shift calibration. |
+|SN8297| has a galaxy very far away and I do not think I found it with the code. Code says that I found something at `r < 300 pixels` |
 
 ### Variables
+
 This section is to keep me consistent
 
 | name | variable | Units or range | description |
@@ -58,6 +67,7 @@ This section is to keep me consistent
 ### Processing Data
 
 #### HST Data rename & combining - `renameFITS.py`
+
 + has two functions `rename(doc)` & `merge(img1, img2)`
 + takes all HST data and renames in formate `data/HST - renamed/<<SN>>_<<filter>>_<<img>>_<<count>>.fits`
     * `<<SN>>` is the SDSS tranient number
@@ -70,21 +80,27 @@ This section is to keep me consistent
     * saves as `data/HST - combined/*.fits`
 
 ### Repeated function
+
 #### General propose  - `ancillary.py`
+
 * `import_fits`
     - imports either the science data or the full fits object (hdu) from fits files given. Only does one file at a time. Call via map()
     - `biteswap` what in the world is this and why do I use it! Does this affect the data[y,x] paradigm I am use to??
 * `get_sn_names`
     - Reads SDSS transient number from files that were renamed & combined. Now we know the numbers associated with the data we currently have. 
+
 #### Plotting - `ploting.py`
+
 * `cdf`
 
 #### Testing - `tests.py`
+
 * I need to test to visually inspect if I found the right thing using `sep`.
 
 ### Generating fractional rank variable
 
 #### Defining the galaxy - `defGalaxy.py`
+
 The main goal is to get an elliptical shape that defines a galaxy.
     
 * output
@@ -97,14 +113,21 @@ This currently does not do all galaxies just a hard code of SN1415!
 * can I define for a galaxy edge by surface brightness (there is a standard galaxy edge definition in this units!)
     - if not, can I find objects by say 5-sigma, but define their edges by 1-sigma over background?
 
+`sep.extract()` settings and why
+
+* thresh
+    - why is this based off of background rms? It should be based off of surface brightness. 
+
 #### Calculating $\Delta$
+
 Oh too much work went into doing this by hand 'cause code just would not do.
 
 `resources/shift.csv` contains the results. SN13038 has an ultra faint (or low surface birghtness?) host so it has no data and an SDSS object ID of 0. Just an FYI
 
 More in section [What are we using to do this $\Delta$](#what-are-we-using-to-do-this-delta)
 
-#### Calculating fractional pixel rank (`fractionalRank.py`)
+#### Calculating fractional pixel rank - `fractionalRank.py`
+
 * Get SN's pixel position
     - read from SDSS file SN's RA & Dec
     - then convert it to HST's RA & Dec
@@ -137,6 +160,7 @@ Question: How do we get the whole galaxy? Looking at SN11860, with ds9 in histog
 Does it matter if a galaxy is universally dimmer. Rigault will preferentially put that in passive (cause they use an absolute H-alpha measurement) we will not. Our passive/active is relative to the Galaxy. Also we have all the same biases talked about in appendix B of Rigault 2014. 
 
 #### $\Delta$
+
 We need to know the pixel in the HST image where the SN Ia was located. We are using HST for it small pixel size (?). yada yada
 
 * Do we need spherical trig when calculating shift?
