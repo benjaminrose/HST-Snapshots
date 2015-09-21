@@ -54,7 +54,8 @@ def get_SN_position(SN_num, data_location='data/SDSS - photometry/', res_locatio
 		
 		#skip 13038 because I dont have anything
 		if sn == '13038':
-			print 'SN13038 does not have a shift'
+			import warnings
+			warnings.warn('SN13038 does not have a shift')
 			SN_position[i] = SkyCoord(ra = ra_sdss, dec = dec_sdss)
 			continue
 
@@ -125,8 +126,7 @@ def rank_supernova(SN_num, positions, sigma=2, box_size=3):
 		#'SN number' was first called 'SN name'. A few old files might still have this issue
 
 		# import HST image 
-		hdu = ancillary.import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
-		data = ancillary.import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn))
+		hdu, data = ancillary.import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
 		
 		# init mask that defines pixels belonging to host
 		# mask = np.zeros((2075,2126)) #currently what is in SN1415, but I could make this dynamic If I first import fits image

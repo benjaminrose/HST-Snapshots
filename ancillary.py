@@ -34,18 +34,19 @@ def import_fits(image, extention=1, hdu_return=False):
 	# Examples:
 
 		sn = 1415
-		hdu = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
+		hdu, data = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
 		data = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn))
 	'''
 
 	hdu = fits.open(image)
 
-	if hdu_return:
-		return hdu
-
 	data = hdu[extention].data #the location of science data in HST multi extention FITS images
 	data = data.byteswap(True).newbyteorder() 
 	#I am unsure why this is needed, but it is!
+
+	if hdu_return:
+		return hdu, data
+
 	return data
 
 def get_sn_names(data_location = 'data/HST - combined/'):
