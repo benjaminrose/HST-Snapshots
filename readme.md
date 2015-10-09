@@ -59,7 +59,7 @@ This section is to keep me consistent
 | name | variable | Units or range | description |
 |------|:------:|-------|------|
 |`Raw' pixel value | $\dfrac{e^{-1}}{s}$ | some flux or something | The value in the fits file for the processed (drz).
-| fractional pixel rank | $r_f$ | [0-1] | The fractional rank of the pixel value of the SN[^fractional pixel rank] compared to the galaxy.|
+| fractional pixel rank | FPR | [0-1] | The fractional rank of the pixel value of the SN[^fractional pixel rank] compared to the galaxy.|
 | WCS shift | $\Delta_{WCS}$  | arcsec | The difference between the position a star in the .fits file and SDSS DR12. [More details below](#calculating-delta)
 
 ## Procedure
@@ -158,6 +158,8 @@ Question: How do we get the whole galaxy? Looking at SN11860, with ds9 in histog
 ## Questions & Answers
 
 Does it matter if a galaxy is universally dimmer. Rigault will preferentially put that in passive (cause they use an absolute H-alpha measurement) we will not. Our passive/active is relative to the Galaxy. Also we have all the same biases talked about in appendix B of Rigault 2014. 
+
+What to do about edge-on galaxdies like SN2561?
 
 #### $\Delta$
 
