@@ -7,6 +7,8 @@
 
 #fits files are too big
 *.fits
+*.png
+*.pdf
 
 #don't sync data
 data/*
