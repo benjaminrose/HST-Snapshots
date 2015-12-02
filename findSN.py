@@ -28,6 +28,7 @@ import sys
 import warnings
 import re #for regular expressions!
 import glob
+import ancillary
 
 #@todo(what are the errors on these guide stars, is the shift less than this?)
 def findGuideStars(SN_location):
@@ -173,34 +174,34 @@ def findRADecShift(catalog_1, catalog_2, accuracy = 1*u.arcsec):
 	return shift, sameobject
 
 #@todo(what is the SDSS error? can we avgerae over 9 HST pixels or do we not know the SN's location enough.)
-def getSDSSPosition(SN):
-	'''
-	Imports SN position from SDSS data. Data is found *. Function returns an array of SkyCoords
-	# Parameters
-	SN: numpy array of strings of 6 characters ('a6')
-		list of sdss 
+# def ancillary.getSDSSPosition(SN):
+# 	'''
+# 	Imports SN position from SDSS data. Data is found *. Function returns an array of SkyCoords
+# 	# Parameters
+# 	SN: numpy array of strings of 6 characters ('a6')
+# 		list of sdss 
 
-	# Returns
-	SN_position: np.array of SkyCoord
-		The position of each SN.
-	'''
-	SN_position = np.zeros(len(SN), dtype=object)
+# 	# Returns
+# 	SN_position: np.array of SkyCoord
+# 		The position of each SN.
+# 	'''
+# 	SN_position = np.zeros(len(SN), dtype=object)
 	
-	for i, sn in enumerate(SN):
-		sn = str(sn).zfill(6) #pad with zeros to match SMP
-		#zfill needs it to be a string, some whow np.array can mess with that.
+# 	for i, sn in enumerate(SN):
+# 		sn = str(sn).zfill(6) #pad with zeros to match SMP
+# 		#zfill needs it to be a string, some whow np.array can mess with that.
 
-		with open('data/SDSS - photometry/SMP_{0}.dat'.format(sn), 'r') as f:
-			first_line = f.readline()
-			#split on white space, convert to numpy array so np.where works
-		split = np.array( re.split(r'\s+', first_line) )
-		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
-		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
-		# print ra_val_where, dec_val_where
-		# print float(split[ra_val_where])*u.deg, type(float(split[ra_val_where]))
-		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
+# 		with open('data/SDSS - photometry/SMP_{0}.dat'.format(sn), 'r') as f:
+# 			first_line = f.readline()
+# 			#split on white space, convert to numpy array so np.where works
+# 		split = np.array( re.split(r'\s+', first_line) )
+# 		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
+# 		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
+# 		# print ra_val_where, dec_val_where
+# 		# print float(split[ra_val_where])*u.deg, type(float(split[ra_val_where]))
+# 		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
 
-	return SN_position
+# 	return SN_position
 
 def getSNNames(data_location = 'data/HST - combined/'):
 	'''
@@ -238,7 +239,7 @@ def saveShift(name, shift):
 
 def main():
 	names = getSNNames()
-	hst, sdss = findGuideStars( getSDSSPosition(names) )
+	hst, sdss = findGuideStars( ancillary.getSDSSPosition(names) )
 	print hst == sdss #why are the catalogs failing on the same objects in `findRADecShift()`, but not in `findGuideStars()`?
 	s, ob = findRADecShift(hst, sdss) #returns shift and collection of the same object data
 	#object 4 has two RA's & two dec's, how!!! and fix!!!
@@ -252,7 +253,7 @@ def main():
 	# print ob
 
 	'''
-	print getSDSSPosition(np.array(['1415', '2102'], dtype='a6')) #'a6' allows for a 6 character sting. other wise we cant pad in place.
+	print ancillary.getSDSSPosition(np.array(['1415', '2102'], dtype='a6')) #'a6' allows for a 6 character sting. other wise we cant pad in place.
 	
 	#for testing
 	SN = [SkyCoord(ra=6*u.degree, dec=0.56*u.degree, frame='icrs'), #SN1415

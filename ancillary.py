@@ -71,3 +71,33 @@ def get_sn_names(data_location = 'data/HST - combined/'):
 		#asssume files are saves like 'SN1415_combined.fits' or 'SN15451_combined.fits'
 
 	return names
+
+#@todo(what is the SDSS error? can we avgerae over 9 HST pixels or do we not know the SN's location enough.)
+def getSDSSPosition(SN):
+	'''
+	Imports SN position from SDSS data. Data is found *. Function returns an array of SkyCoords
+	# Parameters
+	SN: numpy array of strings of 6 characters ('a6')
+		list of sdss 
+
+	# Returns
+	SN_position: np.array of SkyCoord
+		The position of each SN.
+	'''
+	SN_position = np.zeros(len(SN), dtype=object)
+	
+	for i, sn in enumerate(SN):
+		sn = str(sn).zfill(6) #pad with zeros to match SMP
+		#zfill needs it to be a string, some whow np.array can mess with that.
+
+		with open('data/SDSS - photometry/SMP_{0}.dat'.format(sn), 'r') as f:
+			first_line = f.readline()
+			#split on white space, convert to numpy array so np.where works
+		split = np.array( re.split(r'\s+', first_line) )
+		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
+		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
+		# print ra_val_where, dec_val_where
+		# print float(split[ra_val_where])*u.deg, type(float(split[ra_val_where]))
+		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
+
+	return SN_position

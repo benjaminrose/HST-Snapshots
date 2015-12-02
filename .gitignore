@@ -12,3 +12,5 @@
 
 #don't sync data
 data/*
+
+.DS_Store

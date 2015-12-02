@@ -28,6 +28,8 @@
 
 from astropy.io import fits
 from astropy.wcs import WCS
+import astropy.units as u
+from astropy.constants import c, h
 from sys import exit
 from numpy import shape
 import glob
@@ -96,6 +98,14 @@ def merge(img1, img2):
 		#1e-5 is good. 1e-6 does not show up in 1/1000th of a second?
 		badWCS.append(hdu_1[0].header['targname']) #@todo(should we be using a list like this?)
 
+	# adjust pixel values to erg/s rather then electrons/s
+	wavelength_1 = float(hdu_1[0].header['FILTER1'][1:4])*u.AA #or use [1].PHOTPLAM*u.AA
+	wavelength_2 = float(hdu_2[0].header['FILTER1'][1:4])*u.AA
+	photon_energy_1 = (h * c / wavelength_1).cgs
+	photon_energy_2 = (h * c / wavelength_2).cgs
+	gain = 1.0 #defined as number of electrons per photon
+
+
 	# Are they the same size
 	if shape(hdu_1[1].data) != shape(hdu_2[1].data):
 		#if not the same size
@@ -108,6 +118,7 @@ def merge(img1, img2):
 	# Correct header
 	hdu_combined[0].header['comment'] = 'This is a combined images from F475W and FF625W filters by brose3@nd.edu'
 	hdu_combined[0].header['comment'] = 'Header is for F475W images'
+	hdu_combined[1].header['BUNIT'] = 'ERG/S'
 
 	# Save images
 	target = hdu_1[0].header['targname']

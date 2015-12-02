@@ -51,7 +51,7 @@ def correct_galaxy(time, sigma=1.5):
 
 		folder = 'test_results/correct_galaxy/'+time
 		if not path.exists(folder): makedirs(folder)
-		plt.savefig(folder+'/SN'+sn) #currently makes png's
+		plt.savefig(folder+'/SN'+snt) #currently makes png's
 
 		plt.close(str(sn))
 
