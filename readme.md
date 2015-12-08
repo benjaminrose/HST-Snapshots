@@ -51,6 +51,7 @@ SN are used in cosmology and need to be a standard candle, we need to remove all
 |SN6491| has a star on top of the host |
 |SN6614| might have a "star" that is really a "galaxy", check SDSS object ID 1237663785282764968. Also SN6614 uses a galaxy for its WCS shift calibration. |
 |SN8297| has a galaxy very far away and I do not think I found it with the code. Code says that I found something at `r < 300 pixels` |
+|"| host appears as a 4x4 grid in SDSS coadded i-band, but is not visible in HST. The SDSS object is right at the location of the SN. There is a larger galaxy in the bottom right (HST) but that does not seem to be the correct host, note comment above. |
 
 ### Variables
 
@@ -214,4 +215,4 @@ DS9 7.3.2 centroid's on an object in the fits image (preferably a star) compared
 
 
 [^fractional pixel rank]: This might be the 3x3 pixel square around the SN rather then just the SN.
-[^1]: like figure 6 in Rigault 2013
+[^1]: like figure 6 in Rigault 2013che
