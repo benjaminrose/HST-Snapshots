@@ -3,7 +3,10 @@
 
 import numpy as np
 from astropy.io import fits		#to read fits files
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 import glob 					#for geting names from the file system.
+import re
 
 def import_fits(image, extention=1, hdu_return=False):
 	'''
@@ -101,3 +104,10 @@ def getSDSSPosition(SN):
 		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
 
 	return SN_position
+
+# I from fits files I, get sci data, read header, and get wcs. 
+#Maybe these are simple enough with astropy I should not write my own functions?
+
+if __name__ == "__main__":
+	#for testing:
+	getSDSSPosition(['8297'])
