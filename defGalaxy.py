@@ -11,8 +11,9 @@ from sys import exit
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.wcs import WCS
+from astropy.io import fits
 
-def run_sep(data, sigma = 3, name = None, get_all = False, SDSS_data = False):
+def run_sep(data, sigma = 3, name = None, get_all = False, isSdssData = False):
 	'''
 	Takes the science data and a sigma and runs sep to search for the host.
 	If the option `get_all` is set to `True`, that is all it does an it returns
@@ -39,7 +40,7 @@ def run_sep(data, sigma = 3, name = None, get_all = False, SDSS_data = False):
 		A flag to return all found objects or just the elliptical parameters of the most
 		likely host (default).
 
-	SDSS_data: bool
+	isSdssData: bool
 		A flag that determins if this is run on sdss data. If so then the images are cropped 
 		around the expected SN location sep is ran on an area of the sky similar to the HST images.
 		This allows for the same aglorithum to be used to determine the correct host object is identified.
@@ -55,41 +56,57 @@ def run_sep(data, sigma = 3, name = None, get_all = False, SDSS_data = False):
 	'''
 	###############
 	#convert SDSS Data to look like HST data
-	if SDSS_data:
+	if isSdssData:
 		#get SN location
-		#data is like 'data/HST - combined/SN*_combined.fits' with * being 4 or 5 numbers
+		#data is like data/SDSS - coadded/SN8297-i.fits or SN13354-g.fits
 		try: 
-			int(data[-19]) #if item -19 is an int, then ID is 5 numbers long.
-			SDSS_id = data[-19:-14].zfill(6)
+			int(data[-12]) #if item -19 is an int, then ID is 5 numbers long.
+			SDSS_id = data[-12:-7].zfill(6)
 		except ValueError:
-			SDSS_id = data[-18:-14].zfill(6)
-		SN_location = ancillary.getSDSSPosition(SDSS_id)
+			SDSS_id = data[-11:-7].zfill(6)
+		
+		SN_location = ancillary.getSDSSPosition([SDSS_id])[0]
+		#function needs it to be a iterable, and returns an array. Do it this way for only one locatoin.
+		hdu = fits.open(data)
+
+		extention = 0 #default for SDSS
+		try:
+			hdu[0].header.rename_keyword('RADECSYS', 'RADESYS')
+		except ValueError:
+			pass
+		w = WCS(hdu[0].header) #can also use io.fits.getheader('filename')
+		x_sn, y_sn = w.all_world2pix(SN_location.ra.to(u.deg).value, SN_location.dec.to(u.deg).value, 1)
 
 		#crop data to look like HST
 		#todo(check this out again.)
-		img_width = 2000/4 #HST pixels * ratio of SDSS/HST pixel size
-		img_hight = 2000/4
+		img_width = 2000.0/4 #HST pixels * ratio of SDSS/HST pixel size
+		img_hight = 2000.0/4
 
-		w = WCS(hdu[1].header)
-		x_sn, y_sn = w.all_world2pix(SN_location.ra.to(u.deg).value, SN_location.dec.to(u.deg).value, 1)
+		sci_data = hdu[extention].data #the location of science data in HST multi extention FITS images
+		sci_data = sci_data.byteswap(True).newbyteorder() 
 
-		data = 
+		#but what if I hit the edge of the image?
+		sci_data = sci_data[x_sn-img_width/2:x_sn+img_width/2, y_sn-img_hight/2:y_sn+img_hight/2]
+
+		##save as new fits files?
 	else:
+		#data is like 'data/HST - combined/SN*_combined.fits' with * being 4 or 5 numbers
 		# I write these lines all the time!!
 		extention = 1 #default for HST
-		data = hdu[extention].data #the location of science data in HST multi extention FITS images
-		data = data.byteswap(True).newbyteorder() 
+		hdu = fits.open(data)
+		sci_data = hdu[extention].data #the location of science data in HST multi extention FITS images
+		sci_data = sci_data.byteswap(True).newbyteorder() 
 
 
 
 	###############
 	#get backgournd and threshold
-	bkg = sep.Background(data)
+	bkg = sep.Background(sci_data)
 	thresh = sigma*bkg.globalrms
 
 	#get sources
 	try:
-		all_sources = sep.extract(data, thresh, minarea=50)
+		all_sources = sep.extract(sci_data, thresh, minarea=50)
 		#default has minarea=5, SN1415 has 211 (I think with sigam=1)
 		#we get too many sources in some images if we have sigma=1
 	except Exception, e: # (`internal pixel buffer full` is the expected error)
