@@ -1,0 +1,810 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"re",
+				"return"
+			],
+			[
+				"begin",
+				"begin	\\begin{}…\\end{}"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "defGalaxy-new.py",
+			"settings":
+			{
+				"buffer_size": 3361,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "[ 1026.46492135  1049.14782704    24.86210823    18.38684654    -1.52591336] #scidata, area:1436.134372597\n[ 1026.84463303  1049.00117304    36.42411423    29.1977787     -1.42932045] #area:3341.093923853\n[  8.16798485e+02   1.08753677e+03   4.81884909e+00   1.75781703e+00   2.06824511e-01] #rebined - had to increase to search_r to 400\n\n\n\n[ (0.8191424608230591, 217, 207, 1768, 1784, 353, 372, 1776.001507148559, 364.7409476622528, 3.799316257015974, 3.7589099934835133, -0.7217380628759003, 2.1215875148773193, 1.7484543323516846, -0.7714056372642517, 0.27316901087760925, 0.27610543370246887, 0.10490087419748306, 4570.73388671875, 4575.32568359375, 281.58233642578125, 459.44964599609375, 1775, 365, 1775, 365, 0)\n (0.8191424608230591, 113, 112, 808, 826, 1083, 1092, 816.798484779363, 1087.5367658054681, 22.37236819415449, 3.938859199449297, 4.045938210835644, 4.818849086761475, 1.757817029953003, 0.20682451128959656, 0.054895468056201935, 0.31180134415626526, -0.11277563124895096, 118.99909973144531, 120.7184829711914, 1.737196683883667, 2.024801731109619, 815, 1087, 815, 1087, 0)]\n\n\n------------------------\n\n\n[  8.16798485e+02   1.08753677e+03   4.81884909e+00   1.75781703e+00\n   2.06824511e-01]\n\n[sci_data, smoothed_data, rebined] -->\n[ 1026.46492135  1049.14782704    24.86210823    18.38684654    -1.52591336]\n[ 1025.68247662  1048.08352264    35.00787354    29.23702431    -1.35469484]\n[ 1026.84463303  1049.00117304    36.42411423    29.1977787     -1.42932045]T",
+			"settings":
+			{
+				"buffer_size": 1483,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "findSN.py",
+			"settings":
+			{
+				"buffer_size": 11895,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "fractionalRank.py",
+			"settings":
+			{
+				"buffer_size": 11274,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "defGalaxy.py",
+			"settings":
+			{
+				"buffer_size": 9515,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "ancillary.py",
+			"settings":
+			{
+				"buffer_size": 4731,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "resources/dataset.csv",
+			"settings":
+			{
+				"buffer_size": 2659,
+				"line_ending": "Unix",
+				"name": "SDSS ID, IAU ID, RA, dec,"
+			}
+		},
+		{
+			"file": "resources/shift.csv",
+			"settings":
+			{
+				"buffer_size": 2309,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "# Defining galaxy options\n\n## regular HST\n\nThis does not get a large enough galaxy\n\n## SDSS\n\nThis gets a deep image, but its hard to determine the correct host galaxy (can just say closest to SN or closest in galaxy axis units). I also have to get the corrected rotation (figure out how the center to SN line is rotated?). \n\n## SDSS for x,y,a&b with HST for theta\n\nThis might be the easiest way to get the corrected rotation\n\n## Binned HSTHST.\n\nThis should get my low surface brightness back, and I don't need to mess with the converting between SDSS & HST. But do I want an image with the same number of pixels as HST or not?\n\n### But how do we do this?\n\nGaussian smoothing is the easiest, but I don't think that helps with getting counts up. \n\n1 HST pixel = 0.04 arcsec & 1 SDSS pixel = 0.4 arcsec. So if I want 1 SDSS pixel, I need to add a 10x10 square of HST pixels. \n\nfor HST image size (2090, 2108) we get add up for 10 in a row for 10 rows, then move on (while less then max). \n\nfor i in 1-10:\n    for j in 1-10:\n        if not > pixel size\n            sum row(start:start+10)\n            sum sumed_rows(start:start+10)\n            save new pixel value (as one pixel or for all 10x10?)\n        else \n            sum row(start:end)\n            sum sumed_rows(start:end)\n            #unless we get a perfect 10?\n",
+			"settings":
+			{
+				"buffer_size": 1318,
+				"line_ending": "Unix",
+				"name": "Defining galaxy options"
+			}
+		}
+	],
+	"build_system": "Packages/Python/Python.sublime-build",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 203.0,
+		"last_filter": "prject",
+		"selected_items":
+		[
+			[
+				"prject",
+				"Project: Edit"
+			],
+			[
+				"project",
+				"Project: Edit"
+			],
+			[
+				"remov",
+				"Package Control: Remove Package"
+			],
+			[
+				"ss python",
+				"Set Syntax: Python"
+			],
+			[
+				"pand",
+				"Pandoc"
+			],
+			[
+				"ss mark",
+				"Set Syntax: Markdown"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			],
+			[
+				"install ",
+				"Package Control: Install Package"
+			],
+			[
+				"ss plain",
+				"Set Syntax: Plain Text"
+			],
+			[
+				"sidebar",
+				"View: Toggle Open Files in Side Bar"
+			],
+			[
+				"py",
+				"Set Syntax: Python"
+			],
+			[
+				"ss py",
+				"Set Syntax: Python"
+			],
+			[
+				"package",
+				"Package Control: Install Package"
+			],
+			[
+				"python",
+				"Set Syntax: Python"
+			],
+			[
+				"w",
+				"Word Wrap: Toggle"
+			],
+			[
+				"ss json",
+				"Set Syntax: JSON"
+			],
+			[
+				"ss markg",
+				"Set Syntax: Markdown GFM"
+			],
+			[
+				"wo",
+				"Word Wrap: Toggle"
+			],
+			[
+				"wor",
+				"Word Wrap: Toggle"
+			],
+			[
+				"word",
+				"Word Wrap: Toggle"
+			],
+			[
+				"fold",
+				"Code Folding: Fold Tag Attributes"
+			],
+			[
+				"snippet sec",
+				"Snippet: Section"
+			],
+			[
+				"ss tex",
+				"Set Syntax: LaTeX"
+			],
+			[
+				"packag in",
+				"Package Control: Install Package"
+			],
+			[
+				"install c",
+				"Package Control: Install Package"
+			],
+			[
+				"wrap",
+				"Word Wrap: Toggle"
+			],
+			[
+				"figu",
+				"Snippet: figure"
+			],
+			[
+				"figure",
+				"Snippet: Figure"
+			],
+			[
+				"snippet",
+				"Snippet: Figure"
+			],
+			[
+				"ss late",
+				"Set Syntax: LaTeX"
+			],
+			[
+				"ss pytho",
+				"Set Syntax: Python"
+			],
+			[
+				"sync",
+				"Sync Settings: Upload"
+			],
+			[
+				"ss marg",
+				"Set Syntax: Markdown GFM"
+			],
+			[
+				"packa insat",
+				"Package Control: Install Package"
+			],
+			[
+				"packa re",
+				"Package Control: Remove Package"
+			],
+			[
+				"packa inst",
+				"Package Control: Install Package"
+			],
+			[
+				"pack instal",
+				"Package Control: Install Package"
+			],
+			[
+				"pack remove",
+				"Package Control: Remove Package"
+			],
+			[
+				"pack ins",
+				"Package Control: Install Package"
+			],
+			[
+				"pa instal",
+				"Package Control: Install Package"
+			],
+			[
+				"SY",
+				"Sync Settings: Create and Upload"
+			],
+			[
+				"sync ",
+				"Sync Settings: Create and Upload"
+			],
+			[
+				"syn up",
+				"Sync Settings: Upload"
+			],
+			[
+				"create",
+				"Sync Settings: Create and Upload"
+			],
+			[
+				"pack insta",
+				"Package Control: Install Package"
+			],
+			[
+				"package control in",
+				"Package Control: Install Package"
+			],
+			[
+				"package in",
+				"Package Control: Install Package"
+			],
+			[
+				"packin",
+				"Package Control: Install Package"
+			],
+			[
+				"pack inst",
+				"Package Control: Install Package"
+			],
+			[
+				"package insa",
+				"Package Control: Install Package"
+			],
+			[
+				"pack",
+				"Preferences: Browse Packages"
+			]
+		],
+		"width": 417.0
+	},
+	"console":
+	{
+		"height": 344.0,
+		"history":
+		[
+			"import urllib.request,os,hashlib; h = '2915d1851351e5ee549c20394736b442' + '8bc59f460fa1548d1514676163dafc88'; pf = 'Package Control.sublime-package'; ipp = sublime.installed_packages_path(); urllib.request.install_opener( urllib.request.build_opener( urllib.request.ProxyHandler()) ); by = urllib.request.urlopen( 'http://packagecontrol.io/' + pf.replace(' ', '%20')).read(); dh = hashlib.sha256(by).hexdigest(); print('Error validating download (got %s instead of %s), please try manual install' % (dh, h)) if dh != h else open(os.path.join( ipp, pf), 'wb' ).write(by)",
+			"!ls",
+			"a",
+			"a = [1,2,3]",
+			"ls"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+	],
+	"file_history":
+	[
+		"/Users/brose/Google Drive/Projects/HST Snapshots/HSTSnapshots.sublime-project",
+		"/Users/brose/Google Drive/Projects/2016 NASA Fellowship/ResearchStatement.tex",
+		"/Users/brose/Dropbox/Notes/2016-01-22-c-words of encouragement foe miami.md",
+		"/Users/brose/Google Drive/Projects/PHYS70210/notes/2015-01-19-w-psql_gnuplot.md",
+		"/Users/brose/Documents/archive/projects/2015-01-AAS225Poster/AAS225Poster.tex",
+		"/Users/brose/Dropbox/Notes/ResearchLog.md",
+		"/Users/brose/Google Drive/Projects/aas 227/2016-01-05-w-aas helping developers.md",
+		"/Users/brose/Google Drive/Projects/website-personal/_posts/2015-06-16-100-days-of-asher.markdown",
+		"/Users/brose/Desktop/setting up new computer.md",
+		"/Users/brose/Google Drive/Projects/website-personal/_drafts/python 2 and 3.md",
+		"/Users/brose/Google Drive/Projects/HST Snapshots/data/SDSS - photometry/SMP_012860.dat",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/Package Control.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/Preferences.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/Markdown.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/LaTeXTools.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/MarkdownEditing/README.md",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/default_file_type.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/TeX/begin_end.sublime-snippet",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/MarkdownEditing/Markdown.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/Markdown GFM.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/Sync Settings/SyncSettings.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/SyncSettings.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/AutoBackups (OSX).sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/Default/Preferences.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/User/Plain text.sublime-settings",
+		"/Users/brose/Library/Application Support/Sublime Text 3/Packages/AutoBackups/AutoBackups (OSX).sublime-settings"
+	],
+	"find":
+	{
+		"height": 37.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"else",
+			"try",
+			"'",
+			",dec",
+			",ra",
+			"ra",
+			"i",
+			"x_newPixel_edges",
+			"sci_data.shape",
+			"x_newPixel_edges",
+			"stdev",
+			", ",
+			"Example",
+			"12874.0",
+			"12874",
+			"17886",
+			"6057",
+			"width",
+			"height",
+			"5in",
+			"5.5in",
+			".pdf",
+			"vskip",
+			"metalicitity",
+			"mentality",
+			"tmTheme"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 0,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "defGalaxy-new.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3361,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2595,
+								2595
+							]
+						],
+						"settings":
+						{
+							"WordCountShouldRun": false,
+							"WordCountSyntax": "python",
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 1433.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1483,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1483,
+								1483
+							]
+						],
+						"settings":
+						{
+							"WordCountShouldRun": false,
+							"WordCountSyntax": "python",
+							"syntax": "Packages/Python/Python.tmLanguage"
+						},
+						"translation.x": 85.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "findSN.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 11895,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								9537,
+								9537
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 201.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "fractionalRank.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 11274,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								170,
+								170
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 4,
+					"file": "defGalaxy.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9515,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								448,
+								448
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 17.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "ancillary.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 4731,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2295,
+								2295
+							]
+						],
+						"settings":
+						{
+							"WordCountShouldRun": false,
+							"WordCountSyntax": "python",
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.tmLanguage",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 174.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
+					"file": "resources/dataset.csv",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2659,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								305,
+								305
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "resources/shift.csv",
+					"semi_transient": true,
+					"settings":
+					{
+						"buffer_size": 2309,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								14,
+								49
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Text/Plain text.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1318,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								83,
+								83
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/MarkdownEditing/Markdown.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 27.0
+	},
+	"input":
+	{
+		"height": 35.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			],
+			[
+				1,
+				0,
+				2,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			0.439236882435,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.exec":
+	{
+		"height": 175.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"pinned_build_system": "",
+	"project": "HSTSnapshots.sublime-project",
+	"replace":
+	{
+		"height": 50.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 500.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"~/Google Drive/Projects/mySite/mySite.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 187.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}
