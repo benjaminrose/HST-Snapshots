@@ -1,16 +1,22 @@
-#python
+# python
 *.pyc
 
-#general
+# general
 *.tar.gz
 *.numbers
 
-#fits files are too big
+# fits files are too big
 *.fits
+
+# image files
 *.png
 *.pdf
 
-#don't sync data
+# don't sync data
 data/*
 
+# Spotlight index
 .DS_Store
+
+# user specific sublime project data
+*.sublime-workspace
