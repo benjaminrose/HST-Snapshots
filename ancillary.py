@@ -39,8 +39,8 @@ def import_fits(image, extention=0):
 	hdu = fits.open(image)
 
 	data = hdu[extention].data #the location of science data in HST multi extention FITS images
+	# I am unsure why this is needed, but it is!
 	data = data.byteswap(True).newbyteorder() 
-	#I am unsure why this is needed, but it is!
 
 	return hdu, data
 
