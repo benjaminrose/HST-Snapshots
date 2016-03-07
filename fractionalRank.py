@@ -1,12 +1,20 @@
-'''Readme
-Calculating fractional pixel rank
-'''
+""" fractionalRank.py -- Calculating fractional pixel rank
+
+    Benjamin Rose
+    benjamin.rose@me.com
+    Universtiy of Notre Dame
+    Python 2
+    2016-03-07
+    Licesed under the MIT License
+"""
+import re #for regular expressions!
+
 import numpy as np
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.table import Table
 from astropy.wcs import WCS
-import re #for regular expressions!
+
 
 #to be removed when this call gets moved to seperate file
 from astropy.io import fits		#to read fits files
@@ -15,66 +23,93 @@ from matplotlib.patches import Ellipse
 
 import ancillary
 
-def get_SN_position(SN_num, data_location='data/SDSS - photometry/', res_location='resources/'):
-	'''
-	Takes the SDSS number of the SN. Looks up its SDSS locaion from `data_location`
-	and then applies a shift, from `res_location`, and returns the HST RA & dec of
-	the supernova(e).
+def get_SN_SDSS_coord(SNID):
+	"""
+	Gets the cooridnates, in SDSS system, of a given SN defined by its SDSS SN 
+	identification number. The data is taken from photometric data stored in 
+	`data/SDSS - photometry/` from 
+	`http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html`.
 
 	# Parameters 
-	SN_num: sting (maybe?)
-		The SDSS transient number associated with this
+	SNID: int
+		The identification number of the SDSS Supernova, used in file names.
 	
 	# Returns
-	None 
+	SNPosition 
 		will return astopy.SkyCoord of SN's position
-	'''
+	"""
+	data_location='data/SDSS - photometry/'
 
-	SN_position = np.zeros(len(SN_num), dtype=object)
+	# read from SDSS files SN's RA & Dec
+	SNID_string = str(SNID).zfill(6)        #pad with zeros to match SMP
+	with open(data_location+'SMP_{0}.dat'.format(SNID_string), 'r') as f:
+		first_line = f.readline()
+	
+	# split on white space, convert numpy array so np.where works
+	split = np.array( re.split(r'\s+', first_line) )
+	RAValueLocation = np.where(np.array(split) == 'RA:')[0][0]+1
+	DecValueLocation = np.where(np.array(split) == 'DEC:')[0][0]+1
 
+	RA = float(split[RAValueLocation])*u.deg
+	Dec = float(split[DecValueLocation])*u.deg
+	
+	SNPosition = SkyCoord(ra = RA, dec = Dec)
+	#todo(Determing if this is the correct frame: FK5, icrs, etc.)
+
+	return SNPosition
+
+def get_SN_HST_coord(SNID):
+	"""
+	Gets the cooridnates, in HST system, of a given SN defined by its SDSS SN 
+	identification number. The data has a shift applied to change from the 
+	SDSS to HST WCS.
+
+	# Parameters
+	SNID : int
+		The identification number of the SDSS Supernova, used in file names.
+
+	# Returns
+	SNPosition : astopy.SkyCoord
+		The position of the SN, with SDSS-to-HST shift applied. Shifts are 
+		defined in `resources/shift.csv` and reasoning can be found in 
+		`README.md`
+	"""
+	# get position from SDSS information
+	SNPosition = get_SN_SDSS_coord(SNID)
+
+	# import shift data
 	shift = Table.read('resources/shift.csv', format='ascii.commented_header')
-	#@todo(fix it so we can change the location of resources)
 	#need to add units to table, from shift.meta? 
 	shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
 
-	for i, sn in enumerate(SN_num):
-		#read from SDSS file SN's RA & Dec
-		sn_string = str(sn).zfill(6) #pad with zeros to match SMP
-			#zfill needs it to be a string, some how np.array can mess with that.
-		with open(data_location+'SMP_{0}.dat'.format(sn_string), 'r') as f:
-			first_line = f.readline()
-		
-		#split on white space, convert numpy array so np.where works
-		split = np.array( re.split(r'\s+', first_line) )
-		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
-		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
-
-		ra_sdss = float(split[ra_val_where])*u.deg
-		dec_sdss = float(split[dec_val_where])*u.deg
-		
+	# apply shift
+	'''
 		#skip 13038 because I dont have anything
-		if sn == '13038':
-			import warnings
-			warnings.warn('SN13038 does not have a shift')
-			SN_position[i] = SkyCoord(ra = ra_sdss, dec = dec_sdss)
-			continue
+			if SNID == '13038':
+				import warnings
+				warnings.warn('SN13038 does not have a shift')
+				SN_position = SkyCoord(ra = ra_sdss, dec = dec_sdss)
+				continue
 
-		#import shift values
-		dra = shift[shift['SDSS SN Name']==sn]['delta RA']*shift['delta RA'].unit
-		ddec = shift[shift['SDSS SN Name']==sn]['delta Dec']*shift['delta Dec'].unit
-		#where 'SDSS SN Name' is '1415'
-		#use to read: dra = shift[shift['SDSS SN Name']==sn]['delta RA'].quantity
-		#	No idea why that worked. Note documentation diffence between
-		#	calling a column and calling an object in a column and row.
+			#import shift values
+			dra = shift[shift['SDSS SN Name']==SNID]['delta RA']*shift['delta RA'].unit
+			ddec = shift[shift['SDSS SN Name']==SNID]['delta Dec']*shift['delta Dec'].unit
+			#where 'SDSS SN Name' is '1415'
+			#use to read: dra = shift[shift['SDSS SN Name']==SNID]['delta RA'].quantity
+			#	No idea why that worked. Note documentation diffence between
+			#	calling a column and calling an object in a column and row.
 
-		#calculate SN's position in Snapshot
-		ra_snap = dra + ra_sdss #delta = HST - SDSS or HST = delta + SDSS
-		dec_snap = ddec + dec_sdss
+			#calculate SN's position in Snapshot
+			ra_snap = dra + ra_sdss #delta = HST - SDSS or HST = delta + SDSS
+			dec_snap = ddec + dec_sdss
 
-		#save SkyCoord to return
-		SN_position[i] = SkyCoord(ra = ra_snap, dec = dec_snap) #@todo(do I need to correct anything of this?)
-		
-	return SN_position
+			#save SkyCoord to return
+			SN_position = SkyCoord(ra = ra_snap, dec = dec_snap) #@todo(do I need to correct anything of this?)
+			'''
+
+	# return HST position
+	
+	return SNPosition
 
 def rank_supernova(SN_num, positions, sigma=2, box_size=3):
 	'''
@@ -209,12 +244,14 @@ def save_rank(galactic, sn, inside):
 	return None #line can be deleted.
 
 
-def main(sigma = 1.5):
-	print 'starting fractialRank.py'
-	names = ancillary.get_sn_names()
-	position = get_SN_position(names)
-	# position = get_SN_position([1415])
-	# print 'position: ', position
+def main():
+	"""
+	This is the default method for calculucating fractional pixel rank.
+	"""
+	SNID = 2635
+	position = get_SN_HST_coord(names)
+
+	galaxyShape = [95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
 
 	# rank = rank_galactic_pixels([1415], 3)	
 	# sn = get_SN_pixel([1415], position) #this is odd. Why am I reimporting the from fits files?
@@ -222,6 +259,7 @@ def main(sigma = 1.5):
 	# galactic, sn, inside  = rank_supernova([1415], position, 1.5)
 	galactic, sn, inside  = rank_supernova(names, position, 1.5)
 
+	sigma = 1.5
 	sigma_iterate = np.ones(len(names))*sigma
 	# stuff = map(rank_supernova, names, position, sigma_iterate)
 	# print 	galactic, sn, inside
@@ -245,37 +283,16 @@ def main(sigma = 1.5):
 
 	print np.where(5.0 < galactic)[0][0]/float(len(galactic))
 	
-
+	
 	return None
 
 if __name__ == "__main__":
-	main()
+	# main()
+	SNID = 2635
+	position = get_SN_HST_coord(SNID)
+	print position
 
 
-'''
-Benjamin Rose
-benjamin.rose@me.com
-2015-07-22
-Copyright (c) 2015 Benjamin Rose
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject trdo the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-'''
 
 
 
