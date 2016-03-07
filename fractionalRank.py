@@ -10,7 +10,7 @@
 import re #for regular expressions!
 
 import numpy as np
-from astropy.coordinates import SkyCoord
+from astropy.coordinates import SkyCoord, Latitude, Longitude
 from astropy import units as u
 from astropy.table import Table
 from astropy.wcs import WCS
@@ -29,14 +29,15 @@ def get_SN_SDSS_coord(SNID):
 	identification number. The data is taken from photometric data stored in 
 	`data/SDSS - photometry/` from 
 	`http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html`.
+	#todo(figure out the paper that this is from)
 
 	# Parameters 
 	SNID: int
 		The identification number of the SDSS Supernova, used in file names.
 	
 	# Returns
-	SNPosition 
-		will return astopy.SkyCoord of SN's position
+	SNPosition : astopy.SkyCoord
+		The position of the SN found in SDSS Photomentric data. 
 	"""
 	data_location='data/SDSS - photometry/'
 
@@ -50,6 +51,7 @@ def get_SN_SDSS_coord(SNID):
 	RAValueLocation = np.where(np.array(split) == 'RA:')[0][0]+1
 	DecValueLocation = np.where(np.array(split) == 'DEC:')[0][0]+1
 
+	# create SkyCoord
 	RA = float(split[RAValueLocation])*u.deg
 	Dec = float(split[DecValueLocation])*u.deg
 	
@@ -75,40 +77,30 @@ def get_SN_HST_coord(SNID):
 		`README.md`
 	"""
 	# get position from SDSS information
-	SNPosition = get_SN_SDSS_coord(SNID)
+	SDSS_SNPosition = get_SN_SDSS_coord(SNID)
 
-	# import shift data
-	shift = Table.read('resources/shift.csv', format='ascii.commented_header')
-	#need to add units to table, from shift.meta? 
-	shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
+	#skip 13038 because I don't have a shift
+	if SNID == 13038:
+		import warnings
+		warnings.warn('SN13038 does not have a shift')
+		SNPosition = SDSS_SNPosition
+	else:
+		# import shift data
+		#todo(change this location to be dataset.csv)
+		shift = Table.read('resources/shift.csv', format='ascii.commented_header')
+		#todo(add units to table, from shift.meta)
+		shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
 
-	# apply shift
-	'''
-		#skip 13038 because I dont have anything
-			if SNID == '13038':
-				import warnings
-				warnings.warn('SN13038 does not have a shift')
-				SN_position = SkyCoord(ra = ra_sdss, dec = dec_sdss)
-				continue
+		# apply shift with delta = HST - SDSS or HST = delta + SDSS
+		deltaRA = Longitude(
+			shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity
+			)
+		deltaDec = Latitude(
+			shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity
+			)
+		SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
+							  dec = deltaDec + SDSS_SNPosition.dec)
 
-			#import shift values
-			dra = shift[shift['SDSS SN Name']==SNID]['delta RA']*shift['delta RA'].unit
-			ddec = shift[shift['SDSS SN Name']==SNID]['delta Dec']*shift['delta Dec'].unit
-			#where 'SDSS SN Name' is '1415'
-			#use to read: dra = shift[shift['SDSS SN Name']==SNID]['delta RA'].quantity
-			#	No idea why that worked. Note documentation diffence between
-			#	calling a column and calling an object in a column and row.
-
-			#calculate SN's position in Snapshot
-			ra_snap = dra + ra_sdss #delta = HST - SDSS or HST = delta + SDSS
-			dec_snap = ddec + dec_sdss
-
-			#save SkyCoord to return
-			SN_position = SkyCoord(ra = ra_snap, dec = dec_snap) #@todo(do I need to correct anything of this?)
-			'''
-
-	# return HST position
-	
 	return SNPosition
 
 def rank_supernova(SN_num, positions, sigma=2, box_size=3):
