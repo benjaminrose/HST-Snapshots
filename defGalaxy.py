@@ -72,20 +72,41 @@ def run_sep(sciData, edge=0.0016, withSigma=False):
     sources = sep.extract(sciData, threshold, minarea=50)
     return sources
 
-def find_host(sources):
+def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     """
     a search to find the host galaxy from a list of possible sources
 
     # Paramenters
-    sources: np.ndarray
+    sources : np.ndarray
         an structured array of sources, in the format returned by 
-        [`sep`](https://github.com/kbarbary/sep).
+        [`sep`](https://github.com/kbarbary/sep). Need values 
+        `['npix', 'x', 'y', 'a', 'b', 'theta']`.
+
+    initialGuess : tuple
+        The likely pixel location of the host. Needs to be of length 2. This 
+        defaults to the center of an HST image but the SN's location can be 
+        used instead.
 
     # Returns
-    host: np.ndarray
-        a list of all the parameters from sep of the determined host galaxy
+    host : np.void
+        A list of all the parameters from sep of the determined host galaxy.
+        It still a structured array that contains fields named:
+        `['npix', 'x', 'y', 'a', 'b', 'theta']`
     """
-    host = []
+    # Where, in array, are the objects close to initialGuess
+    searchRadius = 200
+    centerIDs = []
+    for i, x in enumerate(sources['x']):
+        if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
+            centerIDs.append(i)
+    #todo(add error for nothing found)
+
+    # Select largest of the close objects
+    # np.argmax() is much better then np.where(a = max(a))
+    idx = np.argmax(sources['npix'][centerIDs])
+    #todo(add error for too many found)
+
+    host = sources[['npix', 'x', 'y', 'a', 'b', 'theta']][idx]
     return host
 
 def main():
@@ -106,7 +127,7 @@ def main():
     sources = run_sep(data, 0.04)
 
     #get "best" object from sep
-    find_host(sources)
+    host = find_host(sources)
 
     #save resutls to file
 
