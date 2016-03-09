@@ -103,9 +103,79 @@ def get_SN_HST_coord(SNID):
 
 	return SNPosition
 
-def rank_supernova(SN_num, positions, sigma=2, box_size=3):
-	'''
-	What is happening
+def get_pixels(SNID):
+	"""
+	Returns the numerical value of the pixels for the host galaxy and the SN
+
+	# Parameters
+	SNID : int
+		The identification number of the SDSS Supernova, used in file names.
+
+	# Returns
+	galaxy : np.array
+		A 1D array of all the value of the pixels of the galaxy
+
+	sn : float
+		The pixel value of the
+	"""
+	# import HUD
+	filePath = 'data/HST - combined/SN{0}_combined.fits'
+	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+	print 'data types: ', type(hdu), type(scidata)
+	return get_galaxy_pixels(hdu, scidata), get_sn_value(hdu, scidata)
+
+def get_galaxy_pixels(hdu, sciData=None):
+	"""
+	Returns the numerical value of the pixels for the host galaxy of `SNID`
+
+	# Parameters
+	hdu : ???
+		The fits (?) object from the data extension. This needs to cantain a 
+		WCS.
+
+	sciData : ???, optional
+		An optional parameter. If science data is not given then it will be 
+		extracted. Provide pre-extracted data if any manipulation is needed 
+		prior to analaysis, ie byteswap.
+
+	# Returns
+	galaxy : np.array
+		A 1D array of all the value of the pixels of the galaxy
+	"""
+	if sciData == None:
+		sciData = hdu.data
+
+	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
+	return galaxy
+
+def get_sn_value(hdu, sciData=None):
+	"""
+	Returns the numerical value of the pixels for the SN
+
+	# Parameters
+	hdu : ???
+		The fits (?) object from the data extension. This needs to cantain a 
+		WCS.
+
+	sciData : ???, optional
+		An optional parameter. If science data is not given then it will be 
+		extracted. Provide pre-extracted data if any manipulation is needed 
+		prior to analaysis, ie byteswap.
+
+	# Returns
+	sn : float
+		The pixel value of the
+	"""
+	if sciData == None:
+		sciData = hdu.data
+
+	sn = 0.1
+	return sn
+
+
+def get_FPR(SNID):#, positions, sigma=2, box_size=3):
+	"""	
+	Retuns the fractional pixel rank for a given SN
 
 	# Parameters 
 	SN_num: list of sting (maybe?)
@@ -136,8 +206,23 @@ def rank_supernova(SN_num, positions, sigma=2, box_size=3):
 
 	inside: bool
 		flag to determing if SN is inside galactic shape
-	'''
+	"""
+	# get galaxtic pixels as a 1D-array
+	galaxy, SN = get_pixels(SNID)
 
+	# calculate calculate the FPR with range [0,1] both inclusive.
+	galaxy.sort()
+	# since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
+	rank = np.where(galaxy == SN)[0]
+	if len(rank) > 1:
+		pass
+	#todo(what happens if the value for SN appears multiple times)
+	# subtact 1 so that the denominator is equal to the largest rank can be.
+	# Notes are available from 2015-03-09
+	fpr = 1.0*rank/(len(galaxy)-1.0)
+	if len(fpr) > 1:
+		fpr = fpr.mean()
+	"""
 	# import galaxie shape information
 	galaxies = Table.read('resources/galaxies_{0}.csv'.format(sigma), format='ascii.commented_header', header_start=1)
 	#@todo(fix it so we can change the location of resources)
@@ -226,6 +311,8 @@ def rank_supernova(SN_num, positions, sigma=2, box_size=3):
 
 		plt.show()
 	return ranked, sn_value, inside
+	"""
+	return fpr
 
 def save_rank(galactic, sn, inside):
 	''' what do I want to save?
@@ -281,8 +368,13 @@ def main():
 if __name__ == "__main__":
 	# main()
 	SNID = 2635
-	position = get_SN_HST_coord(SNID)
-	print position
+	# position = get_SN_HST_coord(SNID)
+	
+	galaxy, SN = get_pixels(SNID)
+	fpr = get_FPR(SNID)#, position)
+
+	print galaxy, SN
+	print fpr
 
 
 
