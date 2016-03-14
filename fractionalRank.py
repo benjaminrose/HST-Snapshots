@@ -103,13 +103,17 @@ def get_SN_HST_coord(SNID):
 
 	return SNPosition
 
-def get_pixels(SNID):
+def get_pixels(SNID, position):
 	"""
 	Returns the numerical value of the pixels for the host galaxy and the SN
 
 	# Parameters
 	SNID : int
 		The identification number of the SDSS Supernova, used in file names.
+
+	position : astropy.SkyCoord
+		The position of the SN. It should be compatible with the WCS found in 
+		the fits file that `SNID` will point to.
 
 	# Returns
 	galaxy : np.array
@@ -121,96 +125,95 @@ def get_pixels(SNID):
 	# import HUD
 	filePath = 'data/HST - combined/SN{0}_combined.fits'
 	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
-	print 'data types: ', type(hdu), type(scidata)
-	return get_galaxy_pixels(hdu, scidata), get_sn_value(hdu, scidata)
+
+	return get_galaxy_pixels(hdu, scidata), get_sn_value(position, hdu, scidata)
 
 def get_galaxy_pixels(hdu, sciData=None):
 	"""
 	Returns the numerical value of the pixels for the host galaxy of `SNID`
 
 	# Parameters
-	hdu : ???
-		The fits (?) object from the data extension. This needs to cantain a 
-		WCS.
+	hdu : astropy.io.fits.hdu.hdulist.HDUList
+		The fits object from the data extension. This needs to cantain a 
+		WCS. Assumes its an HST style object with WCS in extention `1`.
 
-	sciData : ???, optional
-		An optional parameter. If science data is not given then it will be 
-		extracted. Provide pre-extracted data if any manipulation is needed 
-		prior to analaysis, ie byteswap.
+	sciData : np.array, optional
+		A 2D array of the sciecne data from the CCD Chip. If science data is 
+		not given then it will be extracted. Provide pre-extracted data if any 
+		manipulation is needed prior to analaysis, ie byteswap.
 
 	# Returns
 	galaxy : np.array
 		A 1D array of all the value of the pixels of the galaxy
 	"""
-	if sciData == None:
+	# get science data if needed
+	if sciData is None:
 		sciData = hdu.data
+
+	# get galaxy definition
+	galaxyShape = =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
+	
 
 	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
 	return galaxy
 
-def get_sn_value(hdu, sciData=None):
+def get_sn_value(position, hdu, sciData=None):
 	"""
 	Returns the numerical value of the pixels for the SN
 
 	# Parameters
-	hdu : ???
-		The fits (?) object from the data extension. This needs to cantain a 
-		WCS.
+	position : astropy.SkyCoord
+		The position of the SN. It will be used with the WCS found in `hdu`.
 
-	sciData : ???, optional
-		An optional parameter. If science data is not given then it will be 
-		extracted. Provide pre-extracted data if any manipulation is needed 
-		prior to analaysis, ie byteswap.
+	hdu : astropy.io.fits.hdu.hdulist.HDUList
+		The fits object from the data extension. This needs to cantain a 
+		WCS. Assumes its an HST style object with WCS in extention `1`.
+
+	sciData : np.array, optional
+		A 2D array of the sciecne data from the CCD Chip. If science data is 
+		not given then it will be extracted. Provide pre-extracted data if any 
+		manipulation is needed prior to analaysis, ie byteswap.
 
 	# Returns
 	sn : float
 		The pixel value of the
 	"""
-	if sciData == None:
+	# get science data if needed
+	if sciData is None:
 		sciData = hdu.data
+
+	# get world cordinate system
+	# can't just do `WCS('filename')` because of HST has multihead fits files
+	w = WCS(hdu[1].header)
+
+	# Get SN's pixle position
+	# astopy.wcs.WCS only degrees as floats
+	# origin is `0` because we will be working with `sciData`
+	SNPixels = w.all_world2pix(
+		position.ra.to(u.deg).value, 
+		position.dec.to(u.deg).value, 
+		0
+		)
+	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
+	SNPixels = np.round(SNPixels)        # now a veritcal np.array
+
+	# Get value of SN's pixel
+	# numpy.arrays are accessed row then collumn
+	# `all_pix2wold() returns (x, y) so we need to call sciData[row #,column #]
+	sn = sciData[SNPixels[1,0], SNPixels[0,0]]
 
 	sn = 0.1
 	return sn
 
 
-def get_FPR(SNID):#, positions, sigma=2, box_size=3):
-	"""	
-	Retuns the fractional pixel rank for a given SN
-
-	# Parameters 
-	SN_num: list of sting (maybe?)
-		The SDSS transient number associated with this
-
-	positions: list of astropy.coordinates.SkyCoord
-		postion of the supernova. 
-		should this be an arrry or a skycoord of arrays?
-
-	sigma: int, float
-		the sigma detection of the galaxy. aka what galaxy definition file should you use?
-
-	box_size: odd int
-		descibes the lenght of box around SN that is used to define the SN's pixel value.
-		To use just the SN's exact pixel use `box_size = 1` and you get a `1x1` box.
-		To get a `3x3` box, with the SN in the center, use `box_size = 3`: the default.
-		This should only be an odd integer. For exaple, if `box_size = 4` then you will have 
-		one pixle to the left/top of the SN and two to the right/bottom.
-	
-	# Returns
-	galaxy: array
-
-	 --- nope: sn_fractional: float
-		The fractional value of
-
-	sn_value: float
-		value of SN from data
-
-	inside: bool
-		flag to determing if SN is inside galactic shape
+def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
+	"""
 	"""
 	# get galaxtic pixels as a 1D-array
-	galaxy, SN = get_pixels(SNID)
+	galaxy, SN = get_pixels(SNID, position)
 
-	# calculate calculate the FPR with range [0,1] both inclusive.
+	# calculate the FPR with range [0,1] both inclusive.
+	# make CDF of 
 	galaxy.sort()
 	# since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
 	rank = np.where(galaxy == SN)[0]
@@ -368,12 +371,12 @@ def main():
 if __name__ == "__main__":
 	# main()
 	SNID = 2635
-	# position = get_SN_HST_coord(SNID)
+	position = get_SN_HST_coord(SNID)
 	
-	galaxy, SN = get_pixels(SNID)
-	fpr = get_FPR(SNID)#, position)
+	# galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
+	# print galaxy, SN
 
-	print galaxy, SN
+	fpr = get_FPR(SNID, position)#, position)
 	print fpr
 
 
