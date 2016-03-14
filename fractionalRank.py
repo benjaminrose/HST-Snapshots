@@ -10,6 +10,7 @@
 import re #for regular expressions!
 
 import numpy as np
+from scipy import interpolate
 from astropy.coordinates import SkyCoord, Latitude, Longitude
 from astropy import units as u
 from astropy.table import Table
@@ -151,7 +152,7 @@ def get_galaxy_pixels(hdu, sciData=None):
 		sciData = hdu.data
 
 	# get galaxy definition
-	galaxyShape = =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
+	# galaxyShape =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
 	
 
 	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
@@ -202,29 +203,51 @@ def get_sn_value(position, hdu, sciData=None):
 	# `all_pix2wold() returns (x, y) so we need to call sciData[row #,column #]
 	sn = sciData[SNPixels[1,0], SNPixels[0,0]]
 
-	sn = 0.1
+	#take median of 3x3 box. 
+
+	sn = 0.3
 	return sn
 
 
 def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
 	"""
+	Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
+	case of the pixel that hosted the SN.
 	"""
 	# get galaxtic pixels as a 1D-array
 	galaxy, SN = get_pixels(SNID, position)
 
 	# calculate the FPR with range [0,1] both inclusive.
-	# make CDF of 
 	galaxy.sort()
+	
+	# You can't simple do the interpelation for the whole CDF. CDFs are too 
+	# jumpy/verticle for `scipy.interpolate` to work well. It works fine 
+	# between two points but not for the whole range. See notes on 2016-03-14.
+
 	# since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
 	rank = np.where(galaxy == SN)[0]
-	if len(rank) > 1:
-		pass
-	#todo(what happens if the value for SN appears multiple times)
-	# subtact 1 so that the denominator is equal to the largest rank can be.
-	# Notes are available from 2015-03-09
-	fpr = 1.0*rank/(len(galaxy)-1.0)
-	if len(fpr) > 1:
-		fpr = fpr.mean()
+
+	#if `SN` is found in `galaxy` calculate its FPR (or the mean of its FPRs) driectly
+	if len(rank) > 0:
+		# subtact 1 so that the denominator is equal to the largest rank can be.
+		# Notes are available from 2015-03-09
+		fpr = 1.0*rank/(len(galaxy)-1.0)
+		if len(fpr) > 1:
+			fpr = fpr.mean()
+	# if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
+	else:
+		# find nearist neighbors in galaxy and coresponding CDF values
+		# find last entry of where galaxy is less then SN
+		rank_min = np.where(galaxy < SN)[0][-1]
+		# find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
+		rank_max = rank_min + 1
+		fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
+		fpr_max = 1.0*rank_max/(len(galaxy)-1.0)
+		f = interpolate.interp1d([galaxy[rank_min], galaxy[rank_max]]
+								,[fpr_min, fpr_max])
+
+		fpr = f(SN)
+
 	"""
 	# import galaxie shape information
 	galaxies = Table.read('resources/galaxies_{0}.csv'.format(sigma), format='ascii.commented_header', header_start=1)
