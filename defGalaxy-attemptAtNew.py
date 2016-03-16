@@ -32,7 +32,7 @@ def main():
 	sci_data = sci_data.byteswap(True).newbyteorder()
 
 	#smooth image
-	stdev = 0
+	stdev = 3
 	if stdev > 0:
 		gauss = Gaussian2DKernel(stdev)
 		smoothed_data = convolve(sci_data, gauss) 
@@ -66,39 +66,36 @@ def main():
 
 	plt.figure(2)
 	plt.imshow(rebined, vmin=SN['vmin'], vmax=10*SN['vmax'], origin='lower', cmap='Greys')
-	plt.show()
-
 
 	#remove background
-	data = rebined #for testing between the two
-	# for data in [rebined]
-	sigma = 1.5
-	bkg = sep.Background(data)
-	thresh = sigma*bkg.globalrms
+	# data = rebined #for testing between the two
+	for data in [sci_data, smoothed_data, rebined]:
+		sigma = 1.5
+		bkg = sep.Background(data)
+		thresh = sigma*bkg.globalrms
 
-	#run sep
-	# I have a try statement in defGalaxy_deprecated_20160108.py
-	all_sources = sep.extract(data, thresh, minarea=50)
+		#run sep
+		# I have a try statement in defGalaxy_deprecated_20160108.py
+		all_sources = sep.extract(data, thresh, minarea=50)
+		
+		#select center object as galaxy
+		center = (2090/2.0, 2108/2.0)
+		search_r = 200
 
-	print all_sources
-	print '\n\n------------------------\n\n'
-	
-	#select center object as galaxy
-	center = (2090/2.0, 2108/2.0)
-	search_r = 400
+		x_obj = all_sources['x'] #the x value for all objects
+		y_obj = all_sources['y']
+		id_center = []
+		for i, x in enumerate(x_obj):
+			if ((x-center[0])**2 + (y_obj[i]-center[1])**2) < search_r**2:
+				id_center.append(i)
 
-	x_obj = all_sources['x'] #the x value for all objects
-	y_obj = all_sources['y']
-	id_center = []
-	for i, x in enumerate(x_obj):
-		if ((x-center[0])**2 + (y_obj[i]-center[1])**2) < search_r**2:
-			id_center.append(i)
+		# defGalaxy_deprecated_20160108.py has a much longer testing list
+		idx = np.where( all_sources['npix']==max(all_sources['npix'][id_center]) )
 
-	# defGalaxy_deprecated_20160108.py has a much longer testing list
-	idx = np.where( all_sources['npix']==max(all_sources['npix'][id_center]) )
+		host_galaxy = all_sources[['x', 'y', 'a', 'b', 'theta']][idx].view(np.float64)
+		print host_galaxy
 
-	host_galaxy = all_sources[['x', 'y', 'a', 'b', 'theta']][idx].view(np.float64)
-	print host_galaxy
+	plt.show()
 
 if __name__ == "__main__":
 	main()

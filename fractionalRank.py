@@ -1,12 +1,21 @@
-'''Readme
-Calculating fractional pixel rank
-'''
+""" fractionalRank.py -- Calculating fractional pixel rank
+
+    Benjamin Rose
+    benjamin.rose@me.com
+    Universtiy of Notre Dame
+    Python 2
+    2016-03-07
+    Licesed under the MIT License
+"""
+import re #for regular expressions!
+
 import numpy as np
-from astropy.coordinates import SkyCoord
+from scipy import interpolate
+from astropy.coordinates import SkyCoord, Latitude, Longitude
 from astropy import units as u
 from astropy.table import Table
 from astropy.wcs import WCS
-import re #for regular expressions!
+
 
 #to be removed when this call gets moved to seperate file
 from astropy.io import fits		#to read fits files
@@ -15,102 +24,244 @@ from matplotlib.patches import Ellipse
 
 import ancillary
 
-def get_SN_position(SN_num, data_location='data/SDSS - photometry/', res_location='resources/'):
-	'''
-	Takes the SDSS number of the SN. Looks up its SDSS locaion from `data_location`
-	and then applies a shift, from `res_location`, and returns the HST RA & dec of
-	the supernova(e).
+def get_SN_SDSS_coord(SNID):
+	"""
+	Gets the cooridnates, in SDSS system, of a given SN defined by its SDSS SN 
+	identification number. The data is taken from photometric data stored in 
+	`data/SDSS - photometry/` from 
+	`http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html`.
+	#todo(figure out the paper that this is from)
 
 	# Parameters 
-	SN_num: sting (maybe?)
-		The SDSS transient number associated with this
+	SNID: int
+		The identification number of the SDSS Supernova, used in file names.
 	
 	# Returns
-	None 
-		will return astopy.SkyCoord of SN's position
-	'''
+	SNPosition : astopy.SkyCoord
+		The position of the SN found in SDSS Photomentric data. 
+	"""
+	data_location='data/SDSS - photometry/'
 
-	SN_position = np.zeros(len(SN_num), dtype=object)
-
-	shift = Table.read('resources/shift.csv', format='ascii.commented_header')
-	#@todo(fix it so we can change the location of resources)
-	#need to add units to table, from shift.meta? 
-	shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
-
-	for i, sn in enumerate(SN_num):
-		#read from SDSS file SN's RA & Dec
-		sn_string = str(sn).zfill(6) #pad with zeros to match SMP
-			#zfill needs it to be a string, some how np.array can mess with that.
-		with open(data_location+'SMP_{0}.dat'.format(sn_string), 'r') as f:
-			first_line = f.readline()
-		
-		#split on white space, convert numpy array so np.where works
-		split = np.array( re.split(r'\s+', first_line) )
-		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
-		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
-
-		ra_sdss = float(split[ra_val_where])*u.deg
-		dec_sdss = float(split[dec_val_where])*u.deg
-		
-		#skip 13038 because I dont have anything
-		if sn == '13038':
-			import warnings
-			warnings.warn('SN13038 does not have a shift')
-			SN_position[i] = SkyCoord(ra = ra_sdss, dec = dec_sdss)
-			continue
-
-		#import shift values
-		dra = shift[shift['SDSS SN Name']==sn]['delta RA']*shift['delta RA'].unit
-		ddec = shift[shift['SDSS SN Name']==sn]['delta Dec']*shift['delta Dec'].unit
-		#where 'SDSS SN Name' is '1415'
-		#use to read: dra = shift[shift['SDSS SN Name']==sn]['delta RA'].quantity
-		#	No idea why that worked. Note documentation diffence between
-		#	calling a column and calling an object in a column and row.
-
-		#calculate SN's position in Snapshot
-		ra_snap = dra + ra_sdss #delta = HST - SDSS or HST = delta + SDSS
-		dec_snap = ddec + dec_sdss
-
-		#save SkyCoord to return
-		SN_position[i] = SkyCoord(ra = ra_snap, dec = dec_snap) #@todo(do I need to correct anything of this?)
-		
-	return SN_position
-
-def rank_supernova(SN_num, positions, sigma=2, box_size=3):
-	'''
-	What is happening
-
-	# Parameters 
-	SN_num: list of sting (maybe?)
-		The SDSS transient number associated with this
-
-	positions: list of astropy.coordinates.SkyCoord
-		postion of the supernova. 
-		should this be an arrry or a skycoord of arrays?
-
-	sigma: int, float
-		the sigma detection of the galaxy. aka what galaxy definition file should you use?
-
-	box_size: odd int
-		descibes the lenght of box around SN that is used to define the SN's pixel value.
-		To use just the SN's exact pixel use `box_size = 1` and you get a `1x1` box.
-		To get a `3x3` box, with the SN in the center, use `box_size = 3`: the default.
-		This should only be an odd integer. For exaple, if `box_size = 4` then you will have 
-		one pixle to the left/top of the SN and two to the right/bottom.
+	# read from SDSS files SN's RA & Dec
+	SNID_string = str(SNID).zfill(6)        #pad with zeros to match SMP
+	with open(data_location+'SMP_{0}.dat'.format(SNID_string), 'r') as f:
+		first_line = f.readline()
 	
+	# split on white space, convert numpy array so np.where works
+	split = np.array( re.split(r'\s+', first_line) )
+	RAValueLocation = np.where(np.array(split) == 'RA:')[0][0]+1
+	DecValueLocation = np.where(np.array(split) == 'DEC:')[0][0]+1
+
+	# create SkyCoord
+	RA = float(split[RAValueLocation])*u.deg
+	Dec = float(split[DecValueLocation])*u.deg
+	
+	SNPosition = SkyCoord(ra = RA, dec = Dec)
+	#todo(Determing if this is the correct frame: FK5, icrs, etc.)
+
+	return SNPosition
+
+def get_SN_HST_coord(SNID):
+	"""
+	Gets the cooridnates, in HST system, of a given SN defined by its SDSS SN 
+	identification number. The data has a shift applied to change from the 
+	SDSS to HST WCS.
+
+	# Parameters
+	SNID : int
+		The identification number of the SDSS Supernova, used in file names.
+
 	# Returns
-	galaxy: array
+	SNPosition : astopy.SkyCoord
+		The position of the SN, with SDSS-to-HST shift applied. Shifts are 
+		defined in `resources/shift.csv` and reasoning can be found in 
+		`README.md`
+	"""
+	# get position from SDSS information
+	SDSS_SNPosition = get_SN_SDSS_coord(SNID)
 
-	 --- nope: sn_fractional: float
-		The fractional value of
+	#skip 13038 because I don't have a shift
+	if SNID == 13038:
+		import warnings
+		warnings.warn('SN13038 does not have a shift')
+		SNPosition = SDSS_SNPosition
+	else:
+		# import shift data
+		#todo(change this location to be dataset.csv)
+		shift = Table.read('resources/shift.csv', format='ascii.commented_header')
+		#todo(add units to table, from shift.meta)
+		shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
 
-	sn_value: float
-		value of SN from data
+		# apply shift with delta = HST - SDSS or HST = delta + SDSS
+		deltaRA = Longitude(
+			shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity
+			)
+		deltaDec = Latitude(
+			shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity
+			)
+		SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
+							  dec = deltaDec + SDSS_SNPosition.dec)
 
-	inside: bool
-		flag to determing if SN is inside galactic shape
-	'''
+	return SNPosition
 
+def get_pixels(SNID, position):
+	"""
+	Returns the numerical value of the pixels for the host galaxy and the SN
+
+	# Parameters
+	SNID : int
+		The identification number of the SDSS Supernova, used in file names.
+
+	position : astropy.SkyCoord
+		The position of the SN. It should be compatible with the WCS found in 
+		the fits file that `SNID` will point to.
+
+	# Returns
+	galaxy : np.array
+		A 1D array of all the value of the pixels of the galaxy
+
+	sn : float
+		The pixel value of the
+	"""
+	# import HUD
+	filePath = 'data/HST - combined/SN{0}_combined.fits'
+	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+
+	return get_galaxy_pixels(hdu, scidata), get_sn_value(position, hdu, scidata)
+
+def get_galaxy_pixels(hdu, sciData=None):
+	"""
+	Returns the numerical value of the pixels for the host galaxy of `SNID`
+
+	# Parameters
+	hdu : astropy.io.fits.hdu.hdulist.HDUList
+		The fits object from the data extension. This needs to cantain a 
+		WCS. Assumes its an HST style object with WCS in extention `1`.
+
+	sciData : np.array, optional
+		A 2D array of the sciecne data from the CCD Chip. If science data is 
+		not given then it will be extracted. Provide pre-extracted data if any 
+		manipulation is needed prior to analaysis, ie byteswap.
+
+	# Returns
+	galaxy : np.array
+		A 1D array of all the value of the pixels of the galaxy
+	"""
+	# get science data if needed
+	if sciData is None:
+		sciData = hdu.data
+
+	# get galaxy definition
+	# galaxyShape =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
+	galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
+	#todo(I might need to not read this in each time, but rather take it as a parmeter?)
+	print galaxyData
+	hostInfo = galaxyData[galaxyData['SN'] == '2635']
+	#todo('2635' needs to be a parameter)
+
+
+	
+
+	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
+	return galaxy
+
+def get_sn_value(position, hdu, sciData=None):
+	"""
+	Returns the numerical value of the pixels for the SN
+
+	# Parameters
+	position : astropy.SkyCoord
+		The position of the SN. It will be used with the WCS found in `hdu`.
+
+	hdu : astropy.io.fits.hdu.hdulist.HDUList
+		The fits object from the data extension. This needs to cantain a 
+		WCS. Assumes its an HST style object with WCS in extention `1`.
+
+	sciData : np.array, optional
+		A 2D array of the sciecne data from the CCD Chip. If science data is 
+		not given then it will be extracted. Provide pre-extracted data if any 
+		manipulation is needed prior to analaysis, ie byteswap.
+
+	# Returns
+	sn : float
+		The pixel value of the
+	"""
+	# get science data if needed
+	if sciData is None:
+		sciData = hdu.data
+
+	# get world cordinate system
+	# can't just do `WCS('filename')` because of HST has multihead fits files
+	w = WCS(hdu[1].header)
+
+	# Get SN's pixle position
+	# astopy.wcs.WCS only degrees as floats
+	# origin is `0` because we will be working with `sciData`
+	SNPixels = w.all_world2pix(
+		position.ra.to(u.deg).value, 
+		position.dec.to(u.deg).value, 
+		0
+		)
+	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
+	SNPixels = np.round(SNPixels)        # now a veritcal np.array
+
+	# Get value of SN's pixel
+	#take median of 3x3 box. 
+	sn = np.array([])
+	for i in [-1,0,1]:
+		for j in [-1,0,1]:
+			# numpy.arrays are accessed row then collumn and `all_pix2wold()`
+			# returns (x, y) so we need to call sciData[row #,column #]
+			sn = np.append(sn, sciData[SNPixels[1,0]+i, SNPixels[0,0]+j])
+	sn = np.median(sn)
+	#todo(do I want median or mean?)
+
+	
+
+	sn = 0.3
+	return sn
+
+
+def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
+	"""
+	Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
+	case of the pixel that hosted the SN.
+	"""
+	# get galaxtic pixels as a 1D-array
+	galaxy, SN = get_pixels(SNID, position)
+
+	# calculate the FPR with range [0,1] both inclusive.
+	galaxy.sort()
+	
+	# You can't simple do the interpelation for the whole CDF. CDFs are too 
+	# jumpy/verticle for `scipy.interpolate` to work well. It works fine 
+	# between two points but not for the whole range. See notes on 2016-03-14.
+
+	# since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
+	rank = np.where(galaxy == SN)[0]
+
+	#if `SN` is found in `galaxy` calculate its FPR (or the mean of its FPRs) driectly
+	if len(rank) > 0:
+		# subtact 1 so that the denominator is equal to the largest rank can be.
+		# Notes are available from 2015-03-09
+		fpr = 1.0*rank/(len(galaxy)-1.0)
+		if len(fpr) > 1:
+			fpr = fpr.mean()
+	# if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
+	else:
+		# find nearist neighbors in galaxy and coresponding CDF values
+		# find last entry of where galaxy is less then SN
+		rank_min = np.where(galaxy < SN)[0][-1]
+		# find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
+		rank_max = rank_min + 1
+		fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
+		fpr_max = 1.0*rank_max/(len(galaxy)-1.0)
+		f = interpolate.interp1d([galaxy[rank_min], galaxy[rank_max]]
+								,[fpr_min, fpr_max])
+
+		fpr = f(SN)
+
+	"""
 	# import galaxie shape information
 	galaxies = Table.read('resources/galaxies_{0}.csv'.format(sigma), format='ascii.commented_header', header_start=1)
 	#@todo(fix it so we can change the location of resources)
@@ -199,6 +350,8 @@ def rank_supernova(SN_num, positions, sigma=2, box_size=3):
 
 		plt.show()
 	return ranked, sn_value, inside
+	"""
+	return fpr
 
 def save_rank(galactic, sn, inside):
 	''' what do I want to save?
@@ -209,12 +362,14 @@ def save_rank(galactic, sn, inside):
 	return None #line can be deleted.
 
 
-def main(sigma = 1.5):
-	print 'starting fractialRank.py'
-	names = ancillary.get_sn_names()
-	position = get_SN_position(names)
-	# position = get_SN_position([1415])
-	# print 'position: ', position
+def main():
+	"""
+	This is the default method for calculucating fractional pixel rank.
+	"""
+	SNID = 2635
+	position = get_SN_HST_coord(names)
+
+	galaxyShape = [95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
 
 	# rank = rank_galactic_pixels([1415], 3)	
 	# sn = get_SN_pixel([1415], position) #this is odd. Why am I reimporting the from fits files?
@@ -222,6 +377,7 @@ def main(sigma = 1.5):
 	# galactic, sn, inside  = rank_supernova([1415], position, 1.5)
 	galactic, sn, inside  = rank_supernova(names, position, 1.5)
 
+	sigma = 1.5
 	sigma_iterate = np.ones(len(names))*sigma
 	# stuff = map(rank_supernova, names, position, sigma_iterate)
 	# print 	galactic, sn, inside
@@ -245,37 +401,21 @@ def main(sigma = 1.5):
 
 	print np.where(5.0 < galactic)[0][0]/float(len(galactic))
 	
-
+	
 	return None
 
 if __name__ == "__main__":
-	main()
+	# main()
+	SNID = 2635
+	position = get_SN_HST_coord(SNID)
+	
+	# galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
+	# print galaxy, SN
+
+	fpr = get_FPR(SNID, position)#, position)
+	print fpr
 
 
-'''
-Benjamin Rose
-benjamin.rose@me.com
-2015-07-22
-Copyright (c) 2015 Benjamin Rose
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject trdo the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-'''
 
 
 

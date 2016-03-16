@@ -2,18 +2,34 @@
 
 Distance is the hardest thing to measure in Astronomy. Finding a standard candle, an object of known brightness, is a simple way to solve this. Type Ia supernova are our standard candles. This project is an attempt to look at the relationship of local galactic properties, available through HST, and the known scatter of Ia absolute magnitude. 
 
-This file is primarily for me to document what I have done, need to do, and my other thoughts. Secondary it is for others to look at this project and understand what is happening. For them, the most useful sections are [Procedure](#procedure), [Analysis Method](#analysis-method), and [Future Work](#future-work). 
+This file is primarily for me to document what I have done, need to do, and my other thoughts. Secondary it is for others to look at this project and understand what is happening. 
 
-## Table of Contents
+Procedure and on are out of date, and will be updated soon. 
 
-* [Background](#background)
-* [Project Goals](#project-goal)
-* [Data](#data)
-* [Procedure](#procedure)
-* [Questions & Answers](#questions--answers)
-* [Analysis Method](#analysis-method)
-* [Future Work](#future-work)
+<!-- MarkdownTOC -->
 
+- [Background](#background)
+- [Project Goal](#project-goal)
+- [Data](#data)
+    - [Data can be found at](#data-can-be-found-at)
+    - [Data description](#data-description)
+    - [Data issues](#data-issues)
+    - [Variables](#variables)
+- [Procedure](#procedure)
+    - [Processing Data](#processing-data)
+    - [Repeated function](#repeated-function)
+    - [Generating fractional rank variable](#generating-fractional-rank-variable)
+- [Questions & Answers](#questions--answers)
+- [Analysis Method](#analysis-method)
+    - [Ideas](#ideas)
+    - [Issues](#issues)
+- [Future Work](#future-work)
+
+<!-- /MarkdownTOC -->
+
+
+
+<a name="background"></a>
 ## Background
 
 * Mass step (Childress 2013 is recent)
@@ -21,12 +37,15 @@ This file is primarily for me to document what I have done, need to do, and my o
 * Local H$_{\alpha}$ (Rigault 2013)
 * Stuff in emails between Bryan & Peter (with me in there but not commenting.) In early spring 2015
 
+<a name="project-goal"></a>
 ## Project Goal
 
 SN are used in cosmology and need to be a standard candle, we need to remove all variance in their absolute magnitude. Host mass & metallicity have been seen to effect the absolute magnitude of SN, but intuition says it should be a local property not a global galactic property.
 
+<a name="data"></a>
 ## Data
 
+<a name="data-can-be-found-at"></a>
 ### Data can be found at 
 
 * HST data from proposals 
@@ -34,6 +53,7 @@ SN are used in cosmology and need to be a standard candle, we need to remove all
     * [12969](http://archive.stsci.edu/proposal_search.php?id=12969&mission=hst) for Cycle 20 
 * SDSS [transient info](http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html)
 
+<a name="data-description"></a>
 ### Data description
 
 * .drz
@@ -41,6 +61,7 @@ SN are used in cosmology and need to be a standard candle, we need to remove all
 * .flt
     - This comes with two copies. These can be looked at to see each actual observation. But these will have cosmic ray hits and other imperfections. 
 
+<a name="data-issues"></a>
 ### Data issues
 
 | SN | Issue |
@@ -53,6 +74,7 @@ SN are used in cosmology and need to be a standard candle, we need to remove all
 |SN8297| has a galaxy very far away and I do not think I found it with the code. Code says that I found something at `r < 300 pixels` |
 |"| host appears as a 4x4 grid in SDSS coadded i-band, but is not visible in HST. The SDSS object is right at the location of the SN. There is a larger galaxy in the bottom right (HST) but that does not seem to be the correct host, note comment above. |
 
+<a name="variables"></a>
 ### Variables
 
 This section is to keep me consistent
@@ -63,8 +85,10 @@ This section is to keep me consistent
 | fractional pixel rank | FPR | [0-1] | The fractional rank of the pixel value of the SN[^fractional pixel rank] compared to the galaxy.|
 | WCS shift | $\Delta_{WCS}$  | arcsec | The difference between the position a star in the .fits file and SDSS DR12. [More details below](#calculating-delta)
 
+<a name="procedure"></a>
 ## Procedure
 
+<a name="processing-data"></a>
 ### Processing Data
 
 #### HST Data rename & combining - `renameFITS.py`
@@ -80,6 +104,7 @@ This section is to keep me consistent
     * `<<img>>` and `<<count>>` are dropped
     * saves as `data/HST - combined/*.fits`
 
+<a name="repeated-function"></a>
 ### Repeated function
 
 #### General propose  - `ancillary.py`
@@ -98,6 +123,7 @@ This section is to keep me consistent
 
 * I need to test to visually inspect if I found the right thing using `sep`.
 
+<a name="generating-fractional-rank-variable"></a>
 ### Generating fractional rank variable
 
 #### Defining the galaxy - `defGalaxy.py`
@@ -156,6 +182,7 @@ Question: How do we know we have the correct object?
 
 Question: How do we get the whole galaxy? Looking at SN11860, with ds9 in histogram, we see way more galaxy then the resulting shape from sep.
 
+<a name="questions--answers"></a>
 ## Questions & Answers
 
 Does it matter if a galaxy is universally dimmer. Rigault will preferentially put that in passive (cause they use an absolute H-alpha measurement) we will not. Our passive/active is relative to the Galaxy. Also we have all the same biases talked about in appendix B of Rigault 2014. 
@@ -188,8 +215,10 @@ DS9 7.3.2 centroid's on an object in the fits image (preferably a star) compared
     - what about local stars used for $\Delta$? 
         + I think that it is ok (or the best we can do), because they are recent HST & recent DR12 data. 
 
+<a name="analysis-method"></a>
 ## Analysis Method
 
+<a name="ideas"></a>
 ### Ideas
 * Compare fractional pixel rank (~ how many stars are near a SN) to SN parameters ($\Delta M_B$)[^1]
     - Analyses, statistically, if each group (high and low brightness)produce the same SN properties or not.
@@ -200,6 +229,7 @@ DS9 7.3.2 centroid's on an object in the fits image (preferably a star) compared
     - sections 5 and 6 of Rigault. 
     - talking about how this would look like a "Mass Step" will likely be enough. 
 
+<a name="issues"></a>
 ### Issues
 * Low luminosity hosts in SDSS - like SN13038's host
     - What to do with IAU 2006gn (SN13038)? the host is very faint and very low surface brightness and it seems ~0.5 arcmin away
@@ -207,6 +237,7 @@ DS9 7.3.2 centroid's on an object in the fits image (preferably a star) compared
     - in SN17886, with linear scale and scale parameters: -1.15171, & 123.66848. 
 * How to check if there is a cosmic ray hit on the galaxy? or star?
 
+<a name="future-work"></a>
 ## Future Work
 * include KMOS as an option for IFU, 
 * look up hex pack (a pi instrument) on the WIN telescope. 

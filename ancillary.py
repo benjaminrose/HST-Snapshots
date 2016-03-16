@@ -2,55 +2,95 @@
 '''
 
 import numpy as np
+
 from astropy.io import fits		#to read fits files
 from astropy.coordinates import SkyCoord
+from astropy.table import Table
 from astropy import units as u
+
 import glob 					#for geting names from the file system.
 import re
 
-def import_fits(image, extention=1, hdu_return=False):
+def import_fits(image, extention=0):
 	'''
-	Import a fits imagae. 
+	Imports a fits imagae. Takes the path and returns both the hdu object and the science data, as a numpy array.
 
 	# Parameters:
 	image: str
-		The relative path to the fits image.
+		The relative path to the fits image file.
 
 	extention: int
-		Allows for use of mutli-extention FITS images. HST puts data in extention=1.
-
-	hdu_return: bool
-		Defalts to false, and only returns the sciece data for the extention given. 
-		But if set to true it returns the full file. 
+		This is the extention that you want `data` to be taken from. Default is `0` but a common exception is HST where it should be `1`. 
 
 	# Returns:
-	data: np.array
-		A 2D array of the science data.
-
-	OR
-
-	hdu: something
-		The fits image as an object. Contains header and all extentions
+	hdu: astropy.fits.hdu
+		The fits image as an object, contains header and all extentions.
 			hdu.header
 			hdu.data
 
-	# Examples:
+	data: np.array
+		A 2D array of the science data.
 
+	# Examples:
 		sn = 1415
-		hdu, data = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
-		data = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn))
+		hdu, data = import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn))
 	'''
 
 	hdu = fits.open(image)
 
 	data = hdu[extention].data #the location of science data in HST multi extention FITS images
+	# I am unsure why this is needed, but it is!
 	data = data.byteswap(True).newbyteorder() 
-	#I am unsure why this is needed, but it is!
 
-	if hdu_return:
-		return hdu, data
+	return hdu, data
 
-	return data
+def update_dataset():
+	'''
+	Updates `resources/dataset.csv`. It first finds if there are any new SN in 
+	`data/HST - combined` then goes out and fills in `SDSS ID`, `RA`, `dec`. All other
+	entries need to be entered someother way (`delta RA`, `delta Dec`, & `SDSS DR12 obj ID` 
+	were all enetered by hand.)
+
+	Assumes files names are like `SN1415_combined.fits` or `SN15451_combined.fits`
+	'''
+	#get names
+	data_location = 'data/HST - combined/'
+	try:
+		files = glob.glob(data_location + '*')
+	except Exception, e:
+		import warnings
+		warnings.warn('file import from `{0}` failed with warning: {1}'.format(data_location, e))
+
+	names = np.zeros(len(files), dtype='str') #'a6' works instead of 'str', but this is more flexiable
+	for i, fil in enumerate(files):
+		names[i] = fil[len(data_location)+2:-14]
+
+	#import csv
+	try:
+		data = Table.read('resources/dataset.csv', format='ascii.commented_header')
+	except Exception, e:
+		import warnings
+		warnings.warn('importing `resources/dataset.csv` failed with warning: {0}'.format(e))
+	#todo(unit support?)
+
+	#test if new things
+	print data['SDSS ID'][0], names
+
+	for i in data['SDSS ID']:
+		print i == any(names)
+		for j in names:
+			if str(i) == str(j):
+				print 'match'
+				break
+			print 'no match'
+
+		#get RA & Dec
+
+
+	#save new `data` to file
+
+
+	return None
 
 def get_sn_names(data_location = 'data/HST - combined/'):
 	'''
@@ -109,5 +149,5 @@ def getSDSSPosition(SN):
 #Maybe these are simple enough with astropy I should not write my own functions?
 
 if __name__ == "__main__":
-	#for testing:
-	getSDSSPosition(['8297'])
+	# getSDSSPosition(['8297'])
+	update_dataset()
