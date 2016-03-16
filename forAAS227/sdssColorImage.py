@@ -12,9 +12,9 @@ SN_location = SkyCoord(313.833496*u.deg, -0.092829*u.deg)
 # import three sdss images.
 #make sdss color image from g-r-i or u-g-r, look at Sloan algorithm.
 filters = ['i', 'r', 'g'] #order should be RGB?
-data = ['data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[0]),
-	'data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[1]),
-	'data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[2])]
+data = ['../data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[0]),
+	'../data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[1]),
+	'../data/SDSS - coadded/SN{}-{}.fits'.format(SN_number, filters[2])]
 
 extention = 0 
 hdu_0 = fits.open(data[0])

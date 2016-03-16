@@ -93,7 +93,7 @@ SN12874 = {
 SN = SN14984 #to be a for loop later. 
 
 #open data
-data = 'data/HST - combined/SN{}_combined.fits'.format(SN['number'])
+data = '../data/HST - combined/SN{}_combined.fits'.format(SN['number'])
 hdu = fits.open(data)
 extention = 1 #default for HST
 sci_data = hdu[extention].data #the location of science data in HST multi extention FITS images
