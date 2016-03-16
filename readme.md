@@ -8,22 +8,22 @@ Procedure and on are out of date, and will be updated soon.
 
 <!-- MarkdownTOC -->
 
-- [Background][background]
-- [Project Goal][project-goal]
-- [Data][data]
-    - [Data can be found at][data-can-be-found-at]
-    - [Data description][data-description]
-    - [Data issues][data-issues]
-    - [Variables][variables]
-- [Procedure][procedure]
-    - [Processing Data][processing-data]
-    - [Repeated function][repeated-function]
-    - [Generating fractional rank variable][generating-fractional-rank-variable]
-- [Questions & Answers][questions--answers]
-- [Analysis Method][analysis-method]
-    - [Ideas][ideas]
-    - [Issues][issues]
-- [Future Work][future-work]
+- [Background](#background)
+- [Project Goal](#project-goal)
+- [Data](#data)
+    - [Data can be found at](#data-can-be-found-at)
+    - [Data description](#data-description)
+    - [Data issues](#data-issues)
+    - [Variables](#variables)
+- [Procedure](#procedure)
+    - [Processing Data](#processing-data)
+    - [Repeated function](#repeated-function)
+    - [Generating fractional rank variable](#generating-fractional-rank-variable)
+- [Questions & Answers](#questions--answers)
+- [Analysis Method](#analysis-method)
+    - [Ideas](#ideas)
+    - [Issues](#issues)
+- [Future Work](#future-work)
 
 <!-- /MarkdownTOC -->
 
