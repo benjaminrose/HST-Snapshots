@@ -153,6 +153,13 @@ def get_galaxy_pixels(hdu, sciData=None):
 
 	# get galaxy definition
 	# galaxyShape =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
+	galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
+	#todo(I might need to not read this in each time, but rather take it as a parmeter?)
+	print galaxyData
+	hostInfo = galaxyData[galaxyData['SN'] == '2635']
+	#todo('2635' needs to be a parameter)
+
+
 	
 
 	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
@@ -199,11 +206,17 @@ def get_sn_value(position, hdu, sciData=None):
 	SNPixels = np.round(SNPixels)        # now a veritcal np.array
 
 	# Get value of SN's pixel
-	# numpy.arrays are accessed row then collumn
-	# `all_pix2wold() returns (x, y) so we need to call sciData[row #,column #]
-	sn = sciData[SNPixels[1,0], SNPixels[0,0]]
-
 	#take median of 3x3 box. 
+	sn = np.array([])
+	for i in [-1,0,1]:
+		for j in [-1,0,1]:
+			# numpy.arrays are accessed row then collumn and `all_pix2wold()`
+			# returns (x, y) so we need to call sciData[row #,column #]
+			sn = np.append(sn, sciData[SNPixels[1,0]+i, SNPixels[0,0]+j])
+	sn = np.median(sn)
+	#todo(do I want median or mean?)
+
+	
 
 	sn = 0.3
 	return sn
