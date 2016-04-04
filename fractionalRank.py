@@ -145,25 +145,86 @@ def get_galaxy_pixels(hdu, sciData=None):
 
 	# Returns
 	galaxy : np.array
-		A 1D array of all the value of the pixels of the galaxy
+		A 1D array of all the value of the pixels of the galaxy. Unsorted, 
+		or not?
 	"""
 	# get science data if needed
 	if sciData is None:
 		sciData = hdu.data
 
-	# get galaxy definition
-	# galaxyShape =[95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
-	galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
-	#todo(I might need to not read this in each time, but rather take it as a parmeter?)
-	print galaxyData
-	hostInfo = galaxyData[galaxyData['SN'] == '2635']
-	#todo('2635' needs to be a parameter)
+	# init mask that defines pixels belonging to host
+	mask = np.zeros(sciData.shape)
 
+	# get galaxy definition & format its astorpy.table object
+	galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
+	# table headers are: SN ID, npix, x, y, a, b, theta
+	# add apropriate units to the table.
+	galaxyData['theta'].unit = u.radian  
+	# make the rows follow the SNID
+	# SN ID might be 'SN number' or 'SN name'. I have issues with conistency
+	galaxyData.add_index('SN ID')
+	#todo(I might need to not read this in each time, but rather take it as a parmeter?)
+	
+	hostParams = galaxyData.loc[2635]
+	#todo(2635 needs to be a parameter)
+	hostParams = Table(hostParams)     #convert to a Table because Rows suck
+
+
+
+	# sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
+
+	# init variables for ellipse equation
+	ctheta = np.cos(hostParams['theta'].to(u.radian).value)
+	stheta = np.sin(hostParams['theta'].to(u.radian).value)
+
+	# search a section of mask, and update part inside to be 1.
+
+	# define a search radius as the largest of the two axis + 5 pixels
+	r = np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
+
+	for x_index in np.arange(-r, r+1)+hostParams['x'].quantity:
+		for y_index in np.arange(-r, r+1)+hostParams['y'].quantity:
+			#defing the canonical part of the equation
+			x_can = (x_index - hostParams['x'].quantity)*ctheta + (y_index - hostParams['y'].quantity)*stheta
+			y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
+			if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
+				mask[int(y_index), int(x_index)] = 1.0 
+	            #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints?)
+ 
+
+
+	# create a nd.array of the pixel values inside the galaxy.
+	sciDataFlattened = (mask*sciData).flatten()
+	ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
 
 	
+	"""		
+		# ctheta = np.cos(host['theta'].quantity.to(u.radian).value[0]) #should already be radians, but lets just be sure.
+		ctheta = np.cos(theta.to(u.radian).value) #should already be radians, but lets just be sure.
+		stheta = np.sin(theta.to(u.radian).value) #should already be radians, but lets just be sure.
+		center = (x, y)
+		
+
+		# search a section of mask, and update part inside to be 1.
+		r = np.ceil(max(a, b))
+		#can't search for all of mask but we can assume its near a circle defined at center & r = max(a,b)
+		for x_index in np.arange(-r, r+1)+center[0]: #check indexes, these are not whole numbers!
+		    for y_index in np.arange(-r, r+1)+center[1]:
+		        x_can = (x_index - center[0])*ctheta + (y_index - center[1])*stheta #defing the canonical part of the equation
+		        y_can = -(x_index - center[0])*stheta + (y_index - center[1])*ctheta
+		        if (x_can**2)/(a/2)**2 + (y_can**2)/(b/2)**2 <= 1: #maybe do 1.01? or something so that more pixels are countend. It currently can look funny.
+		            # mask[center[1]-r+l, center[0]-r+m] = 1 #it is in a (y,x) coordiante system
+		            mask[y_index, x_index] = 1.0 #indices floor everything that are given to it.
+
+		# get data that is inside galaxy, & rank it
+		ranked_soon = mask*data
+		ranked_flat = ranked_soon.flatten()
+		ranked =  np.sort(ranked_flat[ranked_flat != 0])
+	"""
+
 
 	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
-	return galaxy
+	return ranked
 
 def get_sn_value(position, hdu, sciData=None):
 	"""
@@ -204,7 +265,8 @@ def get_sn_value(position, hdu, sciData=None):
 		)
 	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
 	SNPixels = np.round(SNPixels)        # now a veritcal np.array
-
+	print "snpixels: ", SNPixels
+	import sys;sys.exit()
 	# Get value of SN's pixel
 	#take median of 3x3 box. 
 	sn = np.array([])
@@ -218,7 +280,7 @@ def get_sn_value(position, hdu, sciData=None):
 
 	
 
-	sn = 0.3
+	# sn = 0.3
 	return sn
 
 
@@ -229,6 +291,7 @@ def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
 	"""
 	# get galaxtic pixels as a 1D-array
 	galaxy, SN = get_pixels(SNID, position)
+	#todo(if SN pixel value is less then galaxy edge cut off (look this up), then break and return 0 or -1? This minght need to be done in `get_pixels()` or `get_pixels()` might not be a useful function.)
 
 	# calculate the FPR with range [0,1] both inclusive.
 	galaxy.sort()
@@ -250,8 +313,9 @@ def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
 	# if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
 	else:
 		# find nearist neighbors in galaxy and coresponding CDF values
-		# find last entry of where galaxy is less then SN
-		rank_min = np.where(galaxy < SN)[0][-1]
+		# find last entry of where galaxy is less then N
+		#breaks if SN value is smaller then galaxy. #todo(fix)
+		rank_min = galaxy[galaxy < SN][0][-1]
 		# find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
 		rank_max = rank_min + 1
 		fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
@@ -368,6 +432,7 @@ def main():
 	"""
 	SNID = 2635
 	position = get_SN_HST_coord(names)
+	
 
 	galaxyShape = [95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
 
@@ -408,7 +473,7 @@ if __name__ == "__main__":
 	# main()
 	SNID = 2635
 	position = get_SN_HST_coord(SNID)
-	
+
 	# galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
 	# print galaxy, SN
 

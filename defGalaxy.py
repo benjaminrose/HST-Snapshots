@@ -69,12 +69,15 @@ def run_sep(sciData, edge=0.0016, withSigma=False):
     else:
         threshold = edge
 
-    sources = sep.extract(sciData, threshold, minarea=50)
+    sources = sep.extract(sciData, threshold, minarea=50, deblend_cont=0.1)
     return sources
 
 def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     """
     a search to find the host galaxy from a list of possible sources
+
+    # Issues
+        This is failing with 2635, it is getting an object at (1108.1448309503585, 37.95088945611436) instead of at (1027.0670854882237, 1049.7834967223419)
 
     # Paramenters
     sources : np.ndarray
@@ -124,10 +127,13 @@ def main():
     data = smooth_Image(data, stDev)
 
     #run sep
-    sources = run_sep(data, 0.04)
+    sources = run_sep(data, 0.006)
+    np.savetxt('SN2635_sources_thresh0.0065_cont0.1.csv', sources, delimiter=',')
+    print sources
 
     #get "best" object from sep
     host = find_host(sources)
+    print host
 
     #save resutls to file
 
