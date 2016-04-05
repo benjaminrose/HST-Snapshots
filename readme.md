@@ -1,5 +1,7 @@
 # Looking at local environment of Type Ia supernova hosts via Hubble Space Telescope
 
+[![astropy](http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat)](http://www.astropy.org/)
+
 Distance is the hardest thing to measure in Astronomy. Finding a standard candle, an object of known brightness, is a simple way to solve this. Type Ia supernova are our standard candles. This project is an attempt to look at the relationship of local galactic properties, available through HST, and the known scatter of Ia absolute magnitude. 
 
 This file is primarily for me to document what I have done, need to do, and my other thoughts. Secondary it is for others to look at this project and understand what is happening. 
