@@ -7,6 +7,7 @@
     2016-03-07
     Licesed under the MIT License
 """
+from __future__ import print_function, division
 import re #for regular expressions!
 
 import numpy as np
@@ -104,31 +105,6 @@ def get_SN_HST_coord(SNID):
 
 	return SNPosition
 
-def get_pixels(SNID, position):
-	"""
-	Returns the numerical value of the pixels for the host galaxy and the SN
-
-	# Parameters
-	SNID : int
-		The identification number of the SDSS Supernova, used in file names.
-
-	position : astropy.SkyCoord
-		The position of the SN. It should be compatible with the WCS found in 
-		the fits file that `SNID` will point to.
-
-	# Returns
-	galaxy : np.array
-		A 1D array of all the value of the pixels of the galaxy
-
-	sn : float
-		The pixel value of the
-	"""
-	# import HUD
-	filePath = 'data/HST - combined/SN{0}_combined.fits'
-	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
-
-	return get_galaxy_pixels(hdu, scidata), get_sn_value(position, hdu, scidata)
-
 def get_galaxy_pixels(hdu, sciData=None):
 	"""
 	Returns the numerical value of the pixels for the host galaxy of `SNID`
@@ -169,8 +145,6 @@ def get_galaxy_pixels(hdu, sciData=None):
 	#todo(2635 needs to be a parameter)
 	hostParams = Table(hostParams)     #convert to a Table because Rows suck
 
-
-
 	# sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
 
 	# init variables for ellipse equation
@@ -190,40 +164,11 @@ def get_galaxy_pixels(hdu, sciData=None):
 			if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
 				mask[int(y_index), int(x_index)] = 1.0 
 	            #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints?)
- 
-
 
 	# create a nd.array of the pixel values inside the galaxy.
 	sciDataFlattened = (mask*sciData).flatten()
 	ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
 
-	
-	"""		
-		# ctheta = np.cos(host['theta'].quantity.to(u.radian).value[0]) #should already be radians, but lets just be sure.
-		ctheta = np.cos(theta.to(u.radian).value) #should already be radians, but lets just be sure.
-		stheta = np.sin(theta.to(u.radian).value) #should already be radians, but lets just be sure.
-		center = (x, y)
-		
-
-		# search a section of mask, and update part inside to be 1.
-		r = np.ceil(max(a, b))
-		#can't search for all of mask but we can assume its near a circle defined at center & r = max(a,b)
-		for x_index in np.arange(-r, r+1)+center[0]: #check indexes, these are not whole numbers!
-		    for y_index in np.arange(-r, r+1)+center[1]:
-		        x_can = (x_index - center[0])*ctheta + (y_index - center[1])*stheta #defing the canonical part of the equation
-		        y_can = -(x_index - center[0])*stheta + (y_index - center[1])*ctheta
-		        if (x_can**2)/(a/2)**2 + (y_can**2)/(b/2)**2 <= 1: #maybe do 1.01? or something so that more pixels are countend. It currently can look funny.
-		            # mask[center[1]-r+l, center[0]-r+m] = 1 #it is in a (y,x) coordiante system
-		            mask[y_index, x_index] = 1.0 #indices floor everything that are given to it.
-
-		# get data that is inside galaxy, & rank it
-		ranked_soon = mask*data
-		ranked_flat = ranked_soon.flatten()
-		ranked =  np.sort(ranked_flat[ranked_flat != 0])
-	"""
-
-
-	galaxy = np.array([0,0.1,0.2,1,2,0.2,0.4])
 	return ranked
 
 def get_sn_value(position, hdu, sciData=None):
@@ -265,8 +210,7 @@ def get_sn_value(position, hdu, sciData=None):
 		)
 	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
 	SNPixels = np.round(SNPixels)        # now a veritcal np.array
-	print "snpixels: ", SNPixels
-	import sys;sys.exit()
+
 	# Get value of SN's pixel
 	#take median of 3x3 box. 
 	sn = np.array([])
@@ -278,19 +222,14 @@ def get_sn_value(position, hdu, sciData=None):
 	sn = np.median(sn)
 	#todo(do I want median or mean?)
 
-	
-
-	# sn = 0.3
 	return sn
 
 
-def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
+def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
 	"""
 	Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
 	case of the pixel that hosted the SN.
 	"""
-	# get galaxtic pixels as a 1D-array
-	galaxy, SN = get_pixels(SNID, position)
 	#todo(if SN pixel value is less then galaxy edge cut off (look this up), then break and return 0 or -1? This minght need to be done in `get_pixels()` or `get_pixels()` might not be a useful function.)
 
 	# calculate the FPR with range [0,1] both inclusive.
@@ -313,9 +252,10 @@ def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
 	# if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
 	else:
 		# find nearist neighbors in galaxy and coresponding CDF values
-		# find last entry of where galaxy is less then N
+		# find last entry position of where galaxy is less then N
+		# `np.where()` returns a tuple where we only care about arg-0.
 		#breaks if SN value is smaller then galaxy. #todo(fix)
-		rank_min = galaxy[galaxy < SN][0][-1]
+		rank_min = np.where(galaxy[galaxy < SN])[0][-1]
 		# find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
 		rank_max = rank_min + 1
 		fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
@@ -324,97 +264,6 @@ def get_FPR(SNID, position):#, positions, sigma=2, box_size=3):
 								,[fpr_min, fpr_max])
 
 		fpr = f(SN)
-
-	"""
-	# import galaxie shape information
-	galaxies = Table.read('resources/galaxies_{0}.csv'.format(sigma), format='ascii.commented_header', header_start=1)
-	#@todo(fix it so we can change the location of resources)
-	#table is: x, y, a, b, theta	
-	galaxies['theta'].unit = u.radian
-
-	# for each supernova
-	# for i, sn in enumerate(SN_num): #need both SN_num and position to itterate. currently this is a bad method
-	for sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
-		print sn, position, x, y, a, b, theta
-		# get that host galaxy
-		# host = galaxies[galaxies['SN number'] == sn] #still an astropy table
-		#'SN number' was first called 'SN name'. A few old files might still have this issue
-
-		# import HST image 
-		hdu, data = ancillary.import_fits('data/HST - combined/SN{0}_combined.fits'.format(sn), hdu_return=True)
-		
-		# init mask that defines pixels belonging to host
-		# mask = np.zeros((2075,2126)) #currently what is in SN1415, but I could make this dynamic If I first import fits image
-		mask = np.zeros(data.shape)
-		#why all the [0], currently host produces arrays and we don't want that?
-
-
-		# init variables for ellipse equation
-		# ctheta = np.cos(host['theta'].quantity.to(u.radian).value[0]) #should already be radians, but lets just be sure.
-		ctheta = np.cos(theta.to(u.radian).value) #should already be radians, but lets just be sure.
-		stheta = np.sin(theta.to(u.radian).value) #should already be radians, but lets just be sure.
-		center = (x, y)
-		
-
-		# search a section of mask, and update part inside to be 1.
-		r = np.ceil(max(a, b))
-		#can't search for all of mask but we can assume its near a circle defined at center & r = max(a,b)
-		for x_index in np.arange(-r, r+1)+center[0]: #check indexes, these are not whole numbers!
-		    for y_index in np.arange(-r, r+1)+center[1]:
-		        x_can = (x_index - center[0])*ctheta + (y_index - center[1])*stheta #defing the canonical part of the equation
-		        y_can = -(x_index - center[0])*stheta + (y_index - center[1])*ctheta
-		        if (x_can**2)/(a/2)**2 + (y_can**2)/(b/2)**2 <= 1: #maybe do 1.01? or something so that more pixels are countend. It currently can look funny.
-		            # mask[center[1]-r+l, center[0]-r+m] = 1 #it is in a (y,x) coordiante system
-		            mask[y_index, x_index] = 1.0 #indices floor everything that are given to it.
-
-		# get data that is inside galaxy, & rank it
-		ranked_soon = mask*data
-		ranked_flat = ranked_soon.flatten()
-		ranked =  np.sort(ranked_flat[ranked_flat != 0])
-
-		# get pixel value of SN postion (as a skycoord)
-		w = WCS(hdu[1].header) #can't just do WCS('filename') because of HST has multihead fits files
-
-		x_sn, y_sn = w.all_world2pix(position.ra.to(u.deg).value, position.dec.to(u.deg).value, 1) #this should be better, do it all at once?
-		#all_world2pix gives non-whole numbers
-		x_sn, y_sn = round(x_sn), round(y_sn) #can do np.round (returns lists) or round (returns value)
-		# print x, y
-		# print data[y,x]
-		# print data[x,y]
-		sn_value = data[y_sn,x_sn]
-
-		# I want: xy x-1y-1, x-1y, x-1y+1
-		sn_values = np.array([])
-		 #could make this an input varriable
-		for i in range(box_size):
-			for j in range(box_size):
-				sn_values = np.append(sn_values, data[y_sn-1+i,x_sn-1+j])	
-		sn_value = np.mean(sn_values)
-		# print sn_values, sn_value, data[y,x]
-
-		# convert SN value to rank
-		inside = True
-		if mask[y_sn,x_sn] == 0:
-			inside = False
-
-		'''
-		'''
-		print x_sn, y_sn
-		#elipse over data
-		x_plot = np.arange(center[0]-r, center[0]+r)
-		y_plot = np.arange(center[1]-r, center[1]+r)
-		plt.figure(2)
-		plt.pcolormesh( x_plot, y_plot, data[y_plot[0]:y_plot[-1], x_plot[0]:x_plot[-1]])
-		plt.plot(x_sn, y_sn, marker='*', markersize=15, markerfacecolor='r', markeredgecolor='w') #the location of SN1415
-		plt.colorbar()
-		e = Ellipse(center, a, b, theta.to(u.deg).value)
-		e.set_facecolor([1,.733333333,0])
-		e.set_alpha(0.25)
-		plt.gca().add_patch(e)
-
-		plt.show()
-	return ranked, sn_value, inside
-	"""
 	return fpr
 
 def save_rank(galactic, sn, inside):
@@ -426,89 +275,52 @@ def save_rank(galactic, sn, inside):
 	return None #line can be deleted.
 
 
-def main():
+def main(SNID = 2635):
 	"""
 	This is the default method for calculucating fractional pixel rank.
 	"""
-	SNID = 2635
-	position = get_SN_HST_coord(names)
-	
+	# get SN position
+	print('getting SN position')
+	position = get_SN_HST_coord(SNID)
 
-	galaxyShape = [95, 1108.1448309503585, 37.95088945611436, 2.43723464012146, 2.371455192565918, -1.4546968936920166]
+	# get hdu and extract science data
+	print('getting HDU and SciData')
+	filePath = 'data/HST - combined/SN{0}_combined.fits'
+	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
 
-	# rank = rank_galactic_pixels([1415], 3)	
-	# sn = get_SN_pixel([1415], position) #this is odd. Why am I reimporting the from fits files?
+	# get 
+	print('getting galaxy pixels')
+	galaxy_pixels = get_galaxy_pixels(hdu, scidata)
+	print(galaxy_pixels)
+	print('getting SN pixels')
+	sn_pixel_value = get_sn_value(position, hdu, scidata)
+	print(sn_pixel_value)
 
-	# galactic, sn, inside  = rank_supernova([1415], position, 1.5)
-	galactic, sn, inside  = rank_supernova(names, position, 1.5)
+	# get Fractional Pixel Rank
+	print('getting FPR')
+	fpr = get_FPR(galaxy_pixels, sn_pixel_value)
+	print(fpr)
 
-	sigma = 1.5
-	sigma_iterate = np.ones(len(names))*sigma
-	# stuff = map(rank_supernova, names, position, sigma_iterate)
-	# print 	galactic, sn, inside
+	# save data
+	save_location = 'resources/SN{0}/'.format(SNID)
+	#todo(make `save_location` directory)
+	#todo(what in the world am I doing? How do I want this saved? Updating a csv? Creating a new one? -- a new one for at least galaxy.)
+	np.savetxt(save_location+'SN{0}_host_pixel_values.csv'.format(SNID), galaxy_pixels, delimiter=',', header="The pixel values of SN{} host galaxy. The galaxy's edge is defined hard coded currently".format(SNID))
+	np.savetxt(save_location+'SN{0}_pixel_values.csv'.format(SNID), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID))
+	np.savetxt(save_location+'SN{0}_fpr.csv'.format(SNID), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID))
 
-
-
-	print stuff
-	from sys import exit
-	exit()
-
-
-
-	print np.where(sn < galactic)[0][0]
-
-	SN_fractional = sn/galactic[-1] 
-	print SN_fractional
-
-	cdf_value = np.where(sn < galactic)[0][0]/float(len(galactic))
-	#cdf is numder left of you in the order divided by lenght of data set. 
-	print cdf_value
-
-	print np.where(5.0 < galactic)[0][0]/float(len(galactic))
-	
-	
 	return None
 
 if __name__ == "__main__":
-	# main()
-	SNID = 2635
-	position = get_SN_HST_coord(SNID)
-
-	# galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
-	# print galaxy, SN
-
-	fpr = get_FPR(SNID, position)#, position)
-	print fpr
+	main()
 
 
 
+	# SNID = 2635
+	# position = get_SN_HST_coord(SNID)
 
+	# # galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
+	# # print galaxy, SN
 
-def get_SN_pixel(SN_num, position):
-
-	for i, sn in enumerate(SN_num):
-		#import HST image @todo(should be a function call)
-		hdu = fits.open('data/HST - combined/SN{0}_combined.fits'.format(sn))
-		data = hdu[1].data #the location of science data in HST multi extention FITS images
-		data = data.byteswap(True).newbyteorder()
-		#do I need to close this?
-
-		#get pixel value of SN postion (as a skycoord)
-		hdu = fits.open('data/HST - combined/SN{0}_combined.fits'.format(sn))
-		w = WCS(hdu[1].header)
-
-		#can't just do WCS('filename') because of HST has multihead fits files
-		x, y = w.all_world2pix(position[i].ra.to(u.deg).value, position[i].dec.to(u.deg).value, 1) #this should be better, do it all at once?
-		#all_world2pix gives non-whole numbers
-		x, y = round(x), round(y) #can do np.round (returns lists) or round (returns value)
-		print x, y
-
-		#should it be data[x,y] or data[y,x]?
-		#world2pix looks like (x,y) therefore data[y,x]
-		print hdu[1].data[y,x]
-		print hdu[1].data[x,y]
-
-		#check if its outside the galaxy?
-
-
-	return None
+	# fpr = get_FPR(SNID, position)#, position)
+	# print fpr
