@@ -96,6 +96,7 @@ def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
         It still a structured array that contains fields named:
         `['npix', 'x', 'y', 'a', 'b', 'theta']`
     """
+    #todo(this fails. It is not selecting the right thing at all.)
     # Where, in array, are the objects close to initialGuess
     searchRadius = 200
     centerIDs = []
