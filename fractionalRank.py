@@ -17,12 +17,6 @@ from astropy import units as u
 from astropy.table import Table
 from astropy.wcs import WCS
 
-
-#to be removed when this call gets moved to seperate file
-from astropy.io import fits		#to read fits files
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
-
 import ancillary
 
 def get_SN_SDSS_coord(SNID):
@@ -163,7 +157,7 @@ def get_galaxy_pixels(hdu, sciData=None):
 			y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
 			if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
 				mask[int(y_index), int(x_index)] = 1.0 
-	            #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints?)
+	            #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints? The parameters are too small, but we do need to est that selecting the pixels are the same as what is inside the ellipse.)
 
 	# create a nd.array of the pixel values inside the galaxy.
 	sciDataFlattened = (mask*sciData).flatten()
@@ -203,6 +197,7 @@ def get_sn_value(position, hdu, sciData=None):
 	# Get SN's pixle position
 	# astopy.wcs.WCS only degrees as floats
 	# origin is `0` because we will be working with `sciData`
+	#todo(this is doing this wrong. It does not agree with what DS9 says the pixel value should be for that WCS location.)
 	SNPixels = w.all_world2pix(
 		position.ra.to(u.deg).value, 
 		position.dec.to(u.deg).value, 
@@ -228,7 +223,20 @@ def get_sn_value(position, hdu, sciData=None):
 def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
 	"""
 	Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
-	case of the pixel that hosted the SN.
+	case of the pixel that hosted the SN. It is ok if `SN` is or is not found 
+	in `galaxy`.
+
+	# Parameters
+	galaxy : np.array
+		The float value of the galaxy pixels. 
+
+	SN : float
+		The value of the pixel (actual, median of a 3x3 grid or etc) where the 
+		SN went off.
+
+	# Returns
+	fpr : float
+		The fractional pixel rank. 
 	"""
 	#todo(if SN pixel value is less then galaxy edge cut off (look this up), then break and return 0 or -1? This minght need to be done in `get_pixels()` or `get_pixels()` might not be a useful function.)
 
@@ -266,18 +274,21 @@ def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
 		fpr = f(SN)
 	return fpr
 
-def save_rank(galactic, sn, inside):
-	''' what do I want to save?
-	* galactic list, sn value, if inside?
-	* galactic list - for cdf plot, sn fraction, sn cdf value, 
-	I should be able to easily change what to do if they are inside or not
-	'''
-	return None #line can be deleted.
-
 
 def main(SNID = 2635):
 	"""
-	This is the default method for calculucating fractional pixel rank.
+	This is the default method for calculucating fractional pixel rank for a
+	single SN and it's host. This is set up so `map()` can be used to iterate 
+	through all the SN while calling `main()`.
+
+	# Parameters
+	SNID : int
+		The numerical SDSS ID for the SN.
+
+	# Notes
+	This method saves three files to `'resources/SN{0}/'.format(SNID)`. They 
+	are `SN*_host_pixel_values.csv`, `SN*_pixel_values.csv`, and `SN*_fpr.csv`.
+	Currently it can not make the folders, `SN*`. This needs to be updated.
 	"""
 	# get SN position
 	print('getting SN position')
@@ -289,10 +300,11 @@ def main(SNID = 2635):
 	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
 
 	# get 
-	print('getting galaxy pixels')
+	print('getting galaxy pixels values')
 	galaxy_pixels = get_galaxy_pixels(hdu, scidata)
 	print(galaxy_pixels)
-	print('getting SN pixels')
+	print('getting SN pixel value')
+	print('SN location to pixel is wrong')
 	sn_pixel_value = get_sn_value(position, hdu, scidata)
 	print(sn_pixel_value)
 
