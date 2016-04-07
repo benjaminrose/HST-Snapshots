@@ -74,6 +74,7 @@ def get_SN_HST_coord(SNID):
 	"""
 	# get position from SDSS information
 	SDSS_SNPosition = get_SN_SDSS_coord(SNID)
+	print('SDSS position: ', SDSS_SNPosition.to_string(style=u'hmsdms'))
 
 	#skip 13038 because I don't have a shift
 	if SNID == 13038:
@@ -96,7 +97,8 @@ def get_SN_HST_coord(SNID):
 			)
 		SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
 							  dec = deltaDec + SDSS_SNPosition.dec)
-
+		print('deltas: ', deltaRA, deltaDec)
+		print('SNPosition: ', SNPosition.to_string(style=u'hmsdms'))
 	return SNPosition
 
 def get_galaxy_pixels(hdu, sciData=None):
@@ -198,11 +200,14 @@ def get_sn_value(position, hdu, sciData=None):
 	# astopy.wcs.WCS only degrees as floats
 	# origin is `0` because we will be working with `sciData`
 	#todo(this is doing this wrong. It does not agree with what DS9 says the pixel value should be for that WCS location.)
+	print('position: ', position)
+	print(position.ra.to(u.deg).value, position.dec.to(u.deg).value)
 	SNPixels = w.all_world2pix(
 		position.ra.to(u.deg).value, 
 		position.dec.to(u.deg).value, 
 		0
 		)
+	print('pixels: ', SNPixels)
 	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
 	SNPixels = np.round(SNPixels)        # now a veritcal np.array
 
@@ -324,7 +329,24 @@ def main(SNID = 2635):
 	return None
 
 if __name__ == "__main__":
-	main()
+	# main()
+
+	###########################################
+	## Testing if pixel value is correct for SN
+	###########################################
+	SNID = 2635
+	print('getting SN position')
+	position = get_SN_HST_coord(SNID)
+
+	# get hdu and extract science data
+	print('getting HDU and SciData')
+	filePath = 'data/HST - combined/SN{0}_combined.fits'
+	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+
+	print('getting SN pixel value')
+	print('SN location to pixel is wrong')
+	sn_pixel_value = get_sn_value(position, hdu, scidata)
+	print(sn_pixel_value)
 
 
 
