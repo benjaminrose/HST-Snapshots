@@ -35,4 +35,5 @@ plt.xlabel('pixel count rate [counts/s]')
 plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
 
 # save results
-plt.show()
+# plt.show()
+plt.savefig('figures/2016-04-16-fpr-2635.pdf')
