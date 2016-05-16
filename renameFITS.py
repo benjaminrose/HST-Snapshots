@@ -66,14 +66,15 @@ def rename(doc):
     hdu.close()
     return None
 
-def merge(img1, img2):
+def coadd(img1, img2):
     """
-    * file name of the two fits images you want to merge
-    * comments in new header assume img1 == F475W and img2 == F625W
-    * combines the two (from each filter) drz images
-        * <<filter>> becomes 'combined'
-        * <<img>> and <<count>> are dropped
-    * saves combined as 'data/HST - combined/*.fits'
+    This takes two images (oringally desinged for HST images), and adds them together. The data from the input images are assumed to be in [eletrons/second] and the resulting file will be in [AB-Mag/pixel], maybe? ALso they need to be able to be straight added, no convolution, seeing corrections, or anything fancy like that. comments in new header assume img1 == F475W and img2 == F625W. Should be `drz` images. Saved as `data/<<SN>>_combined.fits`.
+
+    # Parameters
+    img1 : string
+        The file name of the fits file of the first filter
+    img2 : np.ndarray
+        The file name of the fits file of the second filter
     """
     # open images   @todo(should I use try?)
     if img1[-5:] == '.fits':
@@ -118,7 +119,7 @@ def merge(img1, img2):
         hdu_combined[1].data = hdu_1[1].data + hdu_2[1].data
 
     # Correct header
-    hdu_combined[0].header['comment'] = 'This is a combined images from F475W and FF625W filters by brose3@nd.edu'
+    hdu_combined[0].header['comment'] = 'This is a combined images from F475W and F625W filters by brose3@nd.edu'
     hdu_combined[0].header['comment'] = 'Header is for F475W images'
     hdu_combined[1].header['BUNIT'] = 'ERG/S'
 
@@ -147,10 +148,18 @@ def main():
     badWCS = [] 
     F475W = glob.glob('data/HST - renamed/SN*F475W*drz.fits')           
     F625W = glob.glob('data/HST - renamed/SN*F625W*drz.fits')           
-    map(merge, F475W, F625W)                            #merge images and save to combineddata folter
+    map(coadd, F475W, F625W)                            #merge images and save to combineddata folter
     print("bad WCS", badWCS)
 
     return None
 
 if __name__ == '__main__':
     main()
+
+    #Outline
+
+    ## Select and rename drz and flt images to be accesable via the SN number
+
+    ## coadd
+
+    ## color
