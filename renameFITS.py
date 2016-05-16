@@ -12,12 +12,15 @@
 from __future__ import print_function, division
 from sys import exit
 import glob
+from datetime import datetime
 
 from numpy import shape
 from astropy.io import fits
 from astropy.wcs import WCS
 import astropy.units as u
 from astropy.constants import c, h
+
+import ancillary
 
 def rename(doc):
     """
@@ -76,7 +79,13 @@ def coadd(img1, img2):
     img2 : np.ndarray
         The file name of the fits file of the second filter
     """
-    # open images   @todo(should I use try?)
+
+    ######################
+    # open images
+    ######################
+
+    #todo(should I use try?)
+    #todo(change this whole function to use ancillary)
     if img1[-5:] == '.fits':
         if img2[-5:] == '.fits':
             hdu_1 = fits.open(img1)
@@ -86,10 +95,9 @@ def coadd(img1, img2):
     else:
         exit('given none .fits files. Files given: ' + img1 + ' ' + img2)
 
-    # make final hdu
-    #   copy from hdu_1 into final image to transfer all the information
-    #   note that WCS is the same for both images. All is corrected (looked at SN1415 as an example)
-    hdu_combined = hdu_1
+    ######################
+    # test if images match
+    ######################
 
     # Do they have the same wcs at (1000,1000)
     w1 = WCS(hdu_1[1].header)                           #get the WCS of the images
@@ -99,29 +107,40 @@ def coadd(img1, img2):
     if (abs(position1[0] - position2[0] ) > 1e-5) or (abs(position1[1] - position2[1] ) > 1e-5):
         #if either RA or Dec's differeance is too large
         #1e-5 is good. 1e-6 does not show up in 1/1000th of a second?
-        badWCS.append(hdu_1[0].header['targname']) #@todo(should we be using a list like this?)
+        badWCS.append(hdu_1[0].header['targname']) #@todo(should we be using a list like this? I think it should be an warning.)
 
-    # adjust pixel values to erg/s rather then electrons/s
-    wavelength_1 = float(hdu_1[0].header['FILTER1'][1:4])*u.AA #or use [1].PHOTPLAM*u.AA
-    wavelength_2 = float(hdu_2[0].header['FILTER1'][1:4])*u.AA
-    photon_energy_1 = (h * c / wavelength_1).cgs
-    photon_energy_2 = (h * c / wavelength_2).cgs
-    gain = 1.0 #defined as number of electrons per photon
+    ######################
+    # Combine data
+    ######################
 
+    # make final hdu
+    #   copy from hdu_1 into final image to transfer all the information
+    #   note that WCS is the same for both images. All is corrected (looked at SN1415 as an example)
+    hdu_combined = hdu_1
 
-    # Are they the same size
+    # Get inverse sensitiveity, the convertion factor
+    #inverse seinsitivity [ergs/cm2/Ang/electron]
+    invSensitivity_1 = hdu_1[1].PHOTPLAM 
+    invSensitivity_2 = hdu_2[1].PHOTPLAM
+
+    # Combine, with a dance if the sizes are not perfectly the same.
     if shape(hdu_1[1].data) != shape(hdu_2[1].data):
         #if not the same size
         #hard code the miss size issue in SN13038, SN15461 and SN3488. F474W_drz is (2076, 2126) and F625W_drz is (2075, 2126) 
-        hdu_combined[1].data = hdu_1[1].data[:2075] + hdu_2[1].data
+        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data[:2075] 
+                             + invSensitivity_2*hdu_2[1].data
     else:
         #change the data in hdu_combined to be the addition of hdu_1 and hdu_2
-        hdu_combined[1].data = hdu_1[1].data + hdu_2[1].data
+        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data 
+                             + invSensitivity_2*hdu_2[1].data
 
     # Correct header
+    hdu_combined[0].header['comment'] = ''
+    hdu_combined[0].header['comment'] = 'modified at ' + datetime.now().isoformat() 
     hdu_combined[0].header['comment'] = 'This is a combined images from F475W and F625W filters by brose3@nd.edu'
-    hdu_combined[0].header['comment'] = 'Header is for F475W images'
-    hdu_combined[1].header['BUNIT'] = 'ERG/S'
+    hdu_combined[0].header['comment'] = 'Headers are from F475W images with an update to "BUNIT".'
+    hdu_combined[1].header['BUNIT'] = 'ergs/cm2/Ang/sec'
+    ##todo(change maybe a few other parts of the header.)
 
     # Save images
     target = hdu_1[0].header['targname']
