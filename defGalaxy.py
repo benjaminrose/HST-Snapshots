@@ -139,4 +139,55 @@ def main():
     #save resutls to file
 
 if __name__ == "__main__":
-    main()
+    # main()
+    
+    ## Get SN number
+    SNNumber = 2635
+    ### get SDSS and HST image file names
+    sdssFile = 'data/SDSS - coadded/SN{}-g.fits'.format(SNNumber)
+    #todo(this should propbably be combined rather then just g or r)
+    hstFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
+    ### Do I need the location of the SN to figure out SDSS oject?
+
+
+    ## Import science data
+    #`ancillary.import_fits() returns (hdu, scidata)
+    sdssData = ancillary.import_fits(sdssFile, extention=0)[1]
+    hstData = ancillary.import_fits(hstFile, extention=1)[1]
+
+
+    ## run sep on SDSS
+    ### does this need any treatment?
+    sdssSources = run_sep(sdssData, 0.006)
+
+
+    ## select the most likely hosts
+
+
+    ## save out full (OR just most likey?) sep results from SDSS
+    saveAS = 'SN{}_sdss_sources_thresh0.0065_cont0.1.csv'.format(SNNumber)
+    np.savetxt(saveAs, sources, delimiter=',')
+
+
+    ## run sep on HST
+    ### still smoothing?
+    stDev = 3
+    hstData = smooth_Image(hstData, stDev)
+    hstSources = run_sep(hstData, 0.006)
+
+
+    ## select the most likely hosts
+
+
+    ## save out full (OR just most likey?) sep results from HST
+    saveAS = 'SN{}_hst)_sources_thresh0.0065_cont0.1.csv'.format(SNNumber)
+    np.savetxt(saveAs, sources, delimiter=',')
+
+
+    ## Combine and get final galaxy
+    ### center from HST
+    ### a, b from SDSS
+    ### theta from SDSS rotated to HST's wcs
+    #### Check to see if `wcs.crval` is corect. It seems that for SN2635 they were too close together.
+    
+
