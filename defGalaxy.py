@@ -113,12 +113,12 @@ def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     host = sources[['npix', 'x', 'y', 'a', 'b', 'theta']][idx]
     return host
 
-def main():
+def main(SNNumber = 2635):
     """
     This is the default method of defining a galaxy
     """
-    SNNumber = 2635
-    imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
+    # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
+    imageFile = 'data/HST - combined/SN{}_combined_flux.fits'.format(SNNumber)
 
     #import image data
     data = ancillary.import_fits(imageFile, extention=1)[1]
@@ -127,20 +127,35 @@ def main():
     stDev = 3
     data = smooth_Image(data, stDev)
 
+    # find threshold
+    surfaceBrightness = 25.0    #mag/sqr-arcsec
+    #the magniutde per pixel for the same SB, wikipedia for equation
+    magPerPixel = surfaceBrightness - 2.5*np.log10(0.04**2)
+    #convert to AB-mag to flux
+    #more at http://www.stsci.edu/hst/acs/analysis/zeropoints
+    fNu = 3.63e-20*(u.erg / u.cm**2 / u.s / u.Hz)     #this is when AB-mag = 0
+    #convert from f_nu to f_lambda
+    f475 = fNu.to(u.erg / u.cm**2 / u.s / u.nm, equivalencies=u.spectral_density(475*u.nm))    #todo(maybe use the pivot wavelenght instead)
+    f625 = fNu.to(u.erg / u.cm**2 / u.s / u.nm, equivalencies=u.spectral_density(625*u.nm))
+    #this is the zero-mag flux combined like the data
+    fluxAB = f475 + f625
+    fluxThresh = fluxAB * 10**(magPerPixel/-2.5)
+
     #run sep
-    sources = run_sep(data, 0.006)
-    np.savetxt('SN2635_sources_thresh0.0065_cont0.1.csv', sources, delimiter=',')
-    print sources
+    print fluxThresh.value
+    sources = run_sep(data, fluxThresh.value)
+    np.savetxt('2016-05-17-SN{}_sources.csv'.format(SNNumber) , sources[['npix', 'x', 'y', 'a', 'b', 'theta']], delimiter=',')
+    print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
 
     #get "best" object from sep
-    host = find_host(sources)
-    print host
+    # host = find_host(sources)
+    # print host
 
     #save resutls to file
 
 if __name__ == "__main__":
-    # main()
-    
+    main()
+    '''
     ## Get SN number
     SNNumber = 2635
     ### get SDSS and HST image file names
@@ -189,5 +204,5 @@ if __name__ == "__main__":
     ### a, b from SDSS
     ### theta from SDSS rotated to HST's wcs
     #### Check to see if `wcs.crval` is corect. It seems that for SN2635 they were too close together.
-    
+    '''
 
