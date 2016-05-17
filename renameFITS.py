@@ -120,19 +120,17 @@ def coadd(img1, img2):
 
     # Get inverse sensitiveity, the convertion factor
     #inverse seinsitivity [ergs/cm2/Ang/electron]
-    invSensitivity_1 = hdu_1[1].PHOTPLAM 
-    invSensitivity_2 = hdu_2[1].PHOTPLAM
+    invSensitivity_1 = hdu_1[1].header['PHOTPLAM'] 
+    invSensitivity_2 = hdu_2[1].header['PHOTPLAM']
 
     # Combine, with a dance if the sizes are not perfectly the same.
     if shape(hdu_1[1].data) != shape(hdu_2[1].data):
         #if not the same size
         #hard code the miss size issue in SN13038, SN15461 and SN3488. F474W_drz is (2076, 2126) and F625W_drz is (2075, 2126) 
-        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data[:2075] 
-                             + invSensitivity_2*hdu_2[1].data
+        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data[:2075] +invSensitivity_2*hdu_2[1].data
     else:
         #change the data in hdu_combined to be the addition of hdu_1 and hdu_2
-        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data 
-                             + invSensitivity_2*hdu_2[1].data
+        hdu_combined[1].data = invSensitivity_1*hdu_1[1].data + invSensitivity_2*hdu_2[1].data
 
     # Correct header
     hdu_combined[0].header['comment'] = ''
@@ -144,7 +142,7 @@ def coadd(img1, img2):
 
     # Save images
     target = hdu_1[0].header['targname']
-    name = target+'_combined.fits'
+    name = target+'_combined_flux.fits'
     hdu_combined.writeto('data/HST - combined/'+name)
     print('saved '+name)
 
@@ -167,13 +165,21 @@ def main():
     badWCS = [] 
     F475W = glob.glob('data/HST - renamed/SN*F475W*drz.fits')           
     F625W = glob.glob('data/HST - renamed/SN*F625W*drz.fits')           
-    map(coadd, F475W, F625W)                            #merge images and save to combineddata folter
+    map(coadd, F475W, F625W)       #merge images and save to combineddata folter
     print("bad WCS", badWCS)
 
     return None
 
 if __name__ == '__main__':
-    main()
+    # main()
+    # Combine files
+    global badWCS                                       #set up global varriable to store info if there is poor allignment of images
+    badWCS = [] 
+    F475W = glob.glob('data/HST - renamed/SN*F475W*drz.fits')           
+    F625W = glob.glob('data/HST - renamed/SN*F625W*drz.fits')           
+    map(coadd, F475W, F625W)       #merge images and save to combineddata folter
+    print("bad WCS", badWCS)
+
 
     #Outline
 
