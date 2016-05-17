@@ -1,6 +1,7 @@
 """ renameFITS.py -- rename the HST Fits files. Also get added and 
     color versions. Orignal images can be found relative to this file 
     'data/HST - original/*.fits'. Took 54 mins with 122 images on 2015-05-29.
+    Took 18 mins to run just coadd on 2016-05-17.
 
     Benjamin Rose
     benjamin.rose@me.com
@@ -118,7 +119,7 @@ def coadd(img1, img2):
     #   copy from hdu_1 into final image to transfer all the information
     #   note that WCS is the same for both images. All is corrected (looked at SN1415 as an example)
     #   make a unique second copy. I want it in two places in memory
-    hdu_combined = deepcopy(hdu_1)
+    hdu_combined = hdu_1
 
     # Get inverse sensitiveity, the convertion factor
     #inverse seinsitivity [ergs/cm2/Ang/electron]
