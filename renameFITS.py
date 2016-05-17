@@ -10,6 +10,7 @@
     Licesed under the MIT License
 """
 from __future__ import print_function, division
+from copy import deepcopy
 from sys import exit
 import glob
 from datetime import datetime
@@ -116,12 +117,13 @@ def coadd(img1, img2):
     # make final hdu
     #   copy from hdu_1 into final image to transfer all the information
     #   note that WCS is the same for both images. All is corrected (looked at SN1415 as an example)
-    hdu_combined = hdu_1
+    #   make a unique second copy. I want it in two places in memory
+    hdu_combined = deepcopy(hdu_1)
 
     # Get inverse sensitiveity, the convertion factor
     #inverse seinsitivity [ergs/cm2/Ang/electron]
-    invSensitivity_1 = hdu_1[1].header['PHOTPLAM'] 
-    invSensitivity_2 = hdu_2[1].header['PHOTPLAM']
+    invSensitivity_1 = hdu_1[1].header['PHOTFLAM'] 
+    invSensitivity_2 = hdu_2[1].header['PHOTFLAM']
 
     # Combine, with a dance if the sizes are not perfectly the same.
     if shape(hdu_1[1].data) != shape(hdu_2[1].data):
