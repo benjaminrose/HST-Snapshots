@@ -110,8 +110,8 @@ def get_sn_names(data_location = 'data/HST - combined/'):
 	names = np.zeros(len(files), dtype='a6') #'a6' allows for a 6 character sting. other wise we cant pad in place.
 
 	for i, fil in enumerate(files):
-		names[i] = fil[len(data_location)+2:-14]
-		#asssume files are saves like 'SN1415_combined.fits' or 'SN15451_combined.fits'
+		names[i] = fil[len(data_location)+2:-19]
+		#asssume files are saves like 'SN1415_combined_flux.fits' or 'SN15451_combined_flux.fits'
 
 	return names
 
