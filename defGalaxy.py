@@ -9,6 +9,8 @@
     Licesed under the MIT License
 """
 from sys import exit
+from datetime import datetime
+from os import path, makedirs
 
 import numpy as np
 import sep
@@ -41,33 +43,22 @@ def smooth_Image(sciData, stDev):
     smoothedData = convolve(sciData, gauss) 
     return smoothedData
 
-def run_sep(sciData, edge=0.0016, withSigma=False):
+def run_sep(sciData, threshold):
     """
     this takes an image and smooths it
 
     # Parameters
     sciData : 
 
-    edge : float
-        Pixel value used for galaxy edge definion. If `withSigma` is `True`
-        then edge gets treated as a multiple of the background noise. The 
-        default of `0.0016` was from the attempt of calculating HST's 26 mag/
-        sqr arcsec value. But HST has a zeropoint of ~26 mag so this is a bad
-        limit.
-
-    withSigma : bool
-        determeins the meaning of edge, either the defulat (`False`) as a pure
-        value or when set to `True` as a sigma of the background noise.
+    threshold : float
+        Pixel value used for galaxy edge definion. 
 
     # Returens
     sources : np.ndarray
         the sources, in a structured array, found from sep.
     """
-    if withSigma:
-        bkg = sep.Background(sciData)
-        threshold = edge*bkg.globalrms
-    else:
-        threshold = edge
+    bkg = sep.Background(sciData)
+    bkg.subfrom(sciData)
 
     sources = sep.extract(sciData, threshold, minarea=50, deblend_cont=0.1)
     return sources
@@ -98,25 +89,78 @@ def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     """
     #todo(this fails. It is not selecting the right thing at all.)
     # Where, in array, are the objects close to initialGuess
+
+    #todo(change so it searches to 200 always but does a while loop till it finds something.)
     searchRadius = 200
     centerIDs = []
+
     for i, x in enumerate(sources['x']):
         if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
             centerIDs.append(i)
     #todo(add error for nothing found)
+    if len(centerIDs) == 0:
+            searchRadius = 500
+            centerIDs = []    #just play it safe
 
-    # Select largest of the close objects
-    # np.argmax() is much better then np.where(a = max(a))
-    idx = np.argmax(sources['npix'][centerIDs])
+            for i, x in enumerate(sources['x']):
+                if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
+                    centerIDs.append(i)
+    
+     # Select largest of the center objects, but save the ID
+    #this selects the centerID associated with the max (in size) of the central cources
+    idx = centerIDs[np.argmax(sources['npix'][centerIDs])]
     #todo(add error for too many found)
 
     host = sources[['npix', 'x', 'y', 'a', 'b', 'theta']][idx]
     return host
 
+def saveGalaxies(sources, host, SNNumber, sb):
+    """
+    This saves the results of this script using a sytematic convention
+    
+    # Parameters
+    sources : np.ndarray
+        The output of `sep`, a structured array of all the objects.
+
+    host : np.ndarray
+        The pertinate values of the suspected host. The array should be the 
+        result of calling `[['npix', 'x', 'y', 'a', 'b', 'theta']]` on the 
+        stuctured array returned by `sep` for this object.
+
+    SNNumber : int, str
+        This is the number of the SDSS SN that this data coresponds too.
+
+    sb : float
+        The surface brightness threshold that the soucers were found at, in mag/sqr-arcsec
+    """
+
+    #Save ALL objects
+    allHeader = 'data from sep on SN{0} with a SB cutoff of {1} mag/sqr-arcsec on {2}'.format(SNNumber, sb, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
+    allLocationFolder = 'resources/SN{}'.format(SNNumber)
+    allLocationFIle = 'sources_{}.csv'.format(sb)
+    allLocation = allLocationFolder+'/'+allLocationFIle
+    if not path.exists(allLocationFolder): makedirs(allLocationFolder)
+
+    np.savetxt(allLocation, sources, delimiter=',', header=allHeader)
+
+    
+    #Save host
+    #todo(don't assume it existes, but rather check.)
+    hostLocation = 'resources/hosts_{1}.csv'.format(SNNumber, sb)
+    #combine `SNNumber` to the front of `host` data, but structured arrays are stupid. So is np.savetxt()
+    dataToSave = str(SNNumber)
+    for i in host:
+        dataToSave += ', ' + str(i)
+    dataToSave += '\n'
+
+    with open(hostLocation, 'a') as f:
+        f.write(dataToSave)
+
 def main(SNNumber = 2635):
     """
     This is the default method of defining a galaxy
     """
+    print "running SN{}".format(SNNumber)
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
     imageFile = 'data/HST - combined/SN{}_combined_flux.fits'.format(SNNumber)
 
@@ -128,7 +172,7 @@ def main(SNNumber = 2635):
     data = smooth_Image(data, stDev)
 
     # find threshold
-    surfaceBrightness = 25.0    #mag/sqr-arcsec
+    surfaceBrightness = 25    #mag/sqr-arcsec
     #the magniutde per pixel for the same SB, wikipedia for equation
     magPerPixel = surfaceBrightness - 2.5*np.log10(0.04**2)
     #convert to AB-mag to flux
@@ -142,19 +186,22 @@ def main(SNNumber = 2635):
     fluxThresh = fluxAB * 10**(magPerPixel/-2.5)
 
     #run sep
-    print fluxThresh.value
     sources = run_sep(data, fluxThresh.value)
-    np.savetxt('2016-05-17-SN{}_sources.csv'.format(SNNumber) , sources[['npix', 'x', 'y', 'a', 'b', 'theta']], delimiter=',')
-    print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
+    # print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
 
     #get "best" object from sep
-    # host = find_host(sources)
+    host = find_host(sources)
     # print host
 
     #save resutls to file
+    saveGalaxies(sources, host, SNNumber, surfaceBrightness)
 
 if __name__ == "__main__":
-    main()
+    # get integers of the SN numbers/names
+    names = np.array(ancillary.get_sn_names(), dtype=int)
+    map(main, names)
+    # main()
+
     '''
     ## Get SN number
     SNNumber = 2635
