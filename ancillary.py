@@ -106,7 +106,7 @@ def get_sn_names(data_location = 'data/HST - combined/'):
 	names: np.array of strings formated as 'a6'
 		The SDSS transient ID number for these SN. Can be padded with to be length of 6. 
 	'''
-	files = glob.glob(data_location + '*')
+	files = glob.glob(data_location + '*' + '_flux' + '*')
 	names = np.zeros(len(files), dtype='a6') #'a6' allows for a 6 character sting. other wise we cant pad in place.
 
 	for i, fil in enumerate(files):
