@@ -1,0 +1,27 @@
+SN, issues, comment
+SN2102, outside,
+**SN6491**, foreground stars on galaxy, but galaxy looks really cool.
+SN8297, wrong host, nothing there, may be ejected from a cluster check out a Sato (or student) paper on SDSS Ia's from low luminosity 
+SN12781, outside,
+SN12874, outside,
+SN12928, outside, just
+SN12930, outside, in an arm that is not accounted for
+SN13038, wrong host, also hostless
+SN13135, outside, like way outside. SEP looks good
+SN13354, outside/wrong host, this is a galaxy merger? 
+SN13506, , two bright central peaks
+SN13689, outside,
+SN13894, outside,
+**SN14113**, wrong host, corrected 2016-05-19
+SN15171, wrong host, very faint but it is there but SEP did not find it (a min area issue)
+SN15345, extra object,
+SN15850, wrong host, not sure what is the correct host need to look up where SN is
+SN17208, outside, corrected wrong host 2016-05-19
+SN17371, outside,
+SN17886, , looks like sep was not enough
+**SN18415**, wrong host, fixed 2016-05-19
+SN18602, outside, 
+SN19023, wrong host, need to look at where SNIa was
+SN19282, wrong host, very small host -- need to rerun SEP with a smaller min area
+SN19616, outside, way outside
+SN20350, outside, way outside
