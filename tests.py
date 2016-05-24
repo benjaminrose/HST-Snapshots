@@ -23,7 +23,7 @@ from astropy.wcs import WCS
 import ancillary
 import fractionalRank
 
-def correct_galaxy(n=9):
+def correct_galaxy(n=25):
 	"""
 	This saves visual images to see if defGalaxy is working.
 
