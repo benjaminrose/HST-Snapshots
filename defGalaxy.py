@@ -156,9 +156,14 @@ def saveGalaxies(sources, host, SNNumber, sb):
     with open(hostLocation, 'a') as f:
         f.write(dataToSave)
 
-def main(SNNumber = 2635):
+def main_hst(SNNumber = 2635):
     """
-    This is the default method of defining a galaxy
+    This is the default method of defining an hst galaxy
+
+    # Parameters
+    SNNumber : int
+        The sdss identification number of the object you want to find the host 
+        for.
     """
     print "running SN{}".format(SNNumber)
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
@@ -196,11 +201,40 @@ def main(SNNumber = 2635):
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, surfaceBrightness)
 
+def main_sdss(SNNumber = 2635, fltr='g'):
+    """
+    This is the default method of defining an sdss galaxy
+
+    # Parameters
+    SNNumber : int
+        The sdss identification number of the object you want to find the host 
+        for.
+
+    fltr : string, char
+        The single character of an SDSS filter: u, g, r, i, or z (sill python 
+        with `filter` being a built in function!)
+    """
+    print "running SN{}".format(SNNumber)
+
+    imageFile = 'data/SDSS - coadded/SN{0}-{1}.fits'.format(SNNumber, fltr)
+
+    #import image data
+    data = ancillary.import_fits(imageFile, extention=0)[1]
+
+    # find threshold
+    surfaceBrightness = 25    #mag/sqr-arcsec
+    thresh = 0.1
+    #run sep
+    sources = run_sep(data, thresh)
+    print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
+
+
 if __name__ == "__main__":
     # get integers of the SN numbers/names
-    names = np.array(ancillary.get_sn_names(), dtype=int)
-    map(main, names)
-    # main()
+    # names = np.array(ancillary.get_sn_names(), dtype=int)
+    # map(main, names)
+
+    main_sdss()
 
     '''
     ## Get SN number
