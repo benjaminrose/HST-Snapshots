@@ -8,6 +8,7 @@
     2016-03-03
     Licesed under the MIT License
 """
+from __future__ import print_function, division
 from sys import exit
 from datetime import datetime
 from os import path, makedirs
@@ -18,10 +19,11 @@ import sep
 from astropy.convolution import Gaussian2DKernel, convolve
 from astropy.coordinates import SkyCoord
 from astropy import units as u
-from astropy.wcs import WCS
+from astropy import wcs #for WCS, and util
 from astropy.io import fits     #to read fits files
 
 import ancillary 
+import fractionalRank
 
 def smooth_Image(sciData, stDev):
     """
@@ -43,7 +45,7 @@ def smooth_Image(sciData, stDev):
     smoothedData = convolve(sciData, gauss) 
     return smoothedData
 
-def run_sep(sciData, threshold):
+def run_sep(sciData, threshold, minarea=50):
     """
     this takes an image and smooths it
 
@@ -53,6 +55,9 @@ def run_sep(sciData, threshold):
     threshold : float
         Pixel value used for galaxy edge definion. 
 
+    minarea : int
+        The minimum area of the source. Passed directly to sep.
+
     # Returens
     sources : np.ndarray
         the sources, in a structured array, found from sep.
@@ -60,10 +65,10 @@ def run_sep(sciData, threshold):
     bkg = sep.Background(sciData)
     bkg.subfrom(sciData)
 
-    sources = sep.extract(sciData, threshold, minarea=50, deblend_cont=0.1)
+    sources = sep.extract(sciData, threshold, minarea=minarea, deblend_cont=0.1)
     return sources
 
-def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
+def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
     """
     a search to find the host galaxy from a list of possible sources
 
@@ -91,7 +96,6 @@ def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     # Where, in array, are the objects close to initialGuess
 
     #todo(change so it searches to 200 always but does a while loop till it finds something.)
-    searchRadius = 200
     centerIDs = []
 
     for i, x in enumerate(sources['x']):
@@ -110,8 +114,56 @@ def find_host(sources, initialGuess = (2090/2.0, 2108/2.0)):
     #this selects the centerID associated with the max (in size) of the central cources
     idx = centerIDs[np.argmax(sources['npix'][centerIDs])]
     #todo(add error for too many found)
+    #todo(implement a way to fail greacefully if argmax is empty)
 
     host = sources[['npix', 'x', 'y', 'a', 'b', 'theta']][idx]
+    return host
+
+def find_sdss_host(sources, SNID, hdu):
+    """
+    This finds the likly host from the souces in the sdss field
+
+    # Parameters
+    sources : np.ndarray
+        an structured array of sources, in the format returned by 
+        [`sep`](https://github.com/kbarbary/sep). Need values 
+        `['npix', 'x', 'y', 'a', 'b', 'theta']`.
+
+    SNID : int
+        The identification number of the SDSS Supernova, used in file names.
+
+    hdu : astropy.io.fits.hdu.hdulist.HDUList
+        The fits object from the data extension. This needs to cantain a 
+        WCS. Assumes its an SDSS style object with WCS in extention `0`.
+
+    # Returns
+    host : np.void
+        A list of all the parameters from sep of the determined host galaxy.
+        It still a structured array that contains fields named:
+        `['npix', 'x', 'y', 'a', 'b', 'theta']`
+    """
+    SNCoords = fractionalRank.get_SN_SDSS_coord(SNID)
+
+    # get world cordinate system
+    w = wcs.WCS(hdu[0].header)
+
+    # Get SN's pixle position
+    # astopy.wcs.WCS only degrees as floats
+    # origin is `0` because we will be working with `sciData`
+    # SDSS has the stupid WCS backwards
+    print(SNCoords.ra.to(u.deg).value, SNCoords.dec.to(u.deg).value)
+    SNPixels = w.all_world2pix( 
+        SNCoords.dec.to(u.deg).value, 
+        SNCoords.ra.to(u.deg).value,
+        0
+        )
+
+    # can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
+    SNPixels = np.round(SNPixels)        # now a veritcal np.array
+
+    radius = 50
+
+    host = find_host(sources, SNPixels, radius)
     return host
 
 def saveGalaxies(sources, host, SNNumber, sb):
@@ -165,7 +217,7 @@ def main_hst(SNNumber = 2635):
         The sdss identification number of the object you want to find the host 
         for.
     """
-    print "running SN{}".format(SNNumber)
+    print("running SN{}".format(SNNumber))
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
     imageFile = 'data/HST - combined/SN{}_combined_flux.fits'.format(SNNumber)
 
@@ -192,11 +244,11 @@ def main_hst(SNNumber = 2635):
 
     #run sep
     sources = run_sep(data, fluxThresh.value)
-    # print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
+    # print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
     #get "best" object from sep
     host = find_host(sources)
-    # print host
+    # print('host: ', host)
 
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, surfaceBrightness)
@@ -214,20 +266,26 @@ def main_sdss(SNNumber = 2635, fltr='g'):
         The single character of an SDSS filter: u, g, r, i, or z (sill python 
         with `filter` being a built in function!)
     """
-    print "running SN{}".format(SNNumber)
+    print("running SN{}".format(SNNumber))
 
     imageFile = 'data/SDSS - coadded/SN{0}-{1}.fits'.format(SNNumber, fltr)
 
     #import image data
-    data = ancillary.import_fits(imageFile, extention=0)[1]
+    hdu, data = ancillary.import_fits(imageFile, extention=0)
 
     # find threshold
     surfaceBrightness = 25    #mag/sqr-arcsec
-    thresh = 0.1
+    thresh = 1
     #run sep
-    sources = run_sep(data, thresh)
-    print 'sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']]
+    sources = run_sep(data, thresh, 10)
+    np.savetxt('temp-sn2635-sdss-sources.csv', sources, delimiter=',', header='temp sn2635 sdss sources')
+    print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
+    #get "best" object from sep
+    host = find_sdss_host(sources, SNNumber, hdu)
+    print('host: ', host)
+
+    #save resutls to file
 
 if __name__ == "__main__":
     # get integers of the SN numbers/names
