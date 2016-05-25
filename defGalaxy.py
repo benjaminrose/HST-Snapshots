@@ -166,7 +166,7 @@ def find_sdss_host(sources, SNID, hdu):
     host = find_host(sources, SNPixels, radius)
     return host
 
-def saveGalaxies(sources, host, SNNumber, sb):
+def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
     """
     This saves the results of this script using a sytematic convention
     
@@ -183,13 +183,19 @@ def saveGalaxies(sources, host, SNNumber, sb):
         This is the number of the SDSS SN that this data coresponds too.
 
     sb : float
-        The surface brightness threshold that the soucers were found at, in mag/sqr-arcsec
+        The surface brightness threshold that the soucers were found at, in
+        mag/sqr-arcsec
+
+    telescope : str
+        String that represents the telescope that these hosts were observed
+        on. This allows source definintion to be from multiple observations
+        without things getting over written.
     """
 
     #Save ALL objects
-    allHeader = 'data from sep on SN{0} with a SB cutoff of {1} mag/sqr-arcsec on {2}'.format(SNNumber, sb, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
+    allHeader = 'data from sep on SN{} as observed by '.format(SNNumber) + telescope + ' with a SB cutoff of {0} mag/sqr-arcsec on {1}'.format(sb, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
     allLocationFolder = 'resources/SN{}'.format(SNNumber)
-    allLocationFIle = 'sources_{}.csv'.format(sb)
+    allLocationFIle = telescope+'_sources_{}.csv'.format( sb)
     allLocation = allLocationFolder+'/'+allLocationFIle
     if not path.exists(allLocationFolder): makedirs(allLocationFolder)
 
@@ -198,7 +204,7 @@ def saveGalaxies(sources, host, SNNumber, sb):
     
     #Save host
     #todo(don't assume it existes, but rather check.)
-    hostLocation = 'resources/hosts_{1}.csv'.format(SNNumber, sb)
+    hostLocation = 'resources/' + telescope + '_hosts_{}.csv'.format(sb)
     #combine `SNNumber` to the front of `host` data, but structured arrays are stupid. So is np.savetxt()
     dataToSave = str(SNNumber)
     for i in host:
@@ -266,6 +272,9 @@ def main_sdss(SNNumber = 2635, fltr='g'):
         The single character of an SDSS filter: u, g, r, i, or z (sill python 
         with `filter` being a built in function!)
     """
+    #break out if I don't have these sdss files
+    if SNNumber in [12928, 15171, 15850, 19023, 19616, 2561]:
+        return None
     print("running SN{}".format(SNNumber))
 
     imageFile = 'data/SDSS - coadded/SN{0}-{1}.fits'.format(SNNumber, fltr)
@@ -286,13 +295,16 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     print('host: ', host)
 
     #save resutls to file
+    saveGalaxies(sources, host, SNNumber, thresh, 'sdss')
+
 
 if __name__ == "__main__":
     # get integers of the SN numbers/names
-    # names = np.array(ancillary.get_sn_names(), dtype=int)
+    names = np.array(ancillary.get_sn_names(), dtype=int)
     # map(main, names)
 
-    main_sdss()
+    # main_sdss()
+    map(main_sdss, names)
 
     '''
     ## Get SN number
