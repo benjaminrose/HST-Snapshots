@@ -1,0 +1,4 @@
+# data from sep with a SB cutoff of who knows,,,,,,
+# note that a,b need to be scaled by 9 to get the correct elliptical parameters (silly Source Extractor!),missing SN- 12928 15171 19023,,,,
+# SN, npix, x, y, a, b, theta
+17886,11212,577.875926674,765.950204808,19.8502483368,11.6979026794,1.24387478828

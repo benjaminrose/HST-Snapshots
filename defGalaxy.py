@@ -273,7 +273,7 @@ def main_sdss(SNNumber = 2635, fltr='g'):
         with `filter` being a built in function!)
     """
     #break out if I don't have these sdss files
-    if SNNumber in [12928, 15171, 15850, 19023, 19616, 2561]:
+    if SNNumber in [12928, 15171, 19023]:
         return None
     print("running SN{}".format(SNNumber))
 
@@ -283,8 +283,9 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     hdu, data = ancillary.import_fits(imageFile, extention=0)
 
     # find threshold
-    surfaceBrightness = 25    #mag/sqr-arcsec
-    thresh = 1
+    sigma = 2
+    bkg = sep.Background(data)
+    thresh = sigma*bkg.globalrms
     #run sep
     sources = run_sep(data, thresh, 10)
     np.savetxt('temp-sn2635-sdss-sources.csv', sources, delimiter=',', header='temp sn2635 sdss sources')
@@ -295,7 +296,7 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     print('host: ', host)
 
     #save resutls to file
-    saveGalaxies(sources, host, SNNumber, thresh, 'sdss')
+    saveGalaxies(sources, host, SNNumber, sigma, 'sdss')
 
 
 if __name__ == "__main__":
