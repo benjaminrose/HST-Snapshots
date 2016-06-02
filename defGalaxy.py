@@ -161,7 +161,7 @@ def find_sdss_host(sources, SNID, hdu):
     # can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
     SNPixels = np.round(SNPixels)        # now a veritcal np.array
 
-    radius = 50
+    radius = 25
 
     host = find_host(sources, SNPixels, radius)
     return host

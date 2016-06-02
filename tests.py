@@ -42,7 +42,7 @@ def correct_galaxy(telescope, n=9):
 	if telescope == 'hst':
 		galaxies = Table.read('resources/hosts_25.csv', format='ascii.csv', header_start=2)
 	elif telescope == 'sdss':
-		galaxies = Table.read('resources/sdss_hosts_2_test.csv', format='ascii.csv', header_start=2)
+		galaxies = Table.read('resources/sdss_hosts_2.csv', format='ascii.csv', header_start=2)
 	else:
 		raise ValueError('{} is unacceptable, use "hst" or "sdss" to represent the correct galaxy definition you want to test.'.format(telescope))
 	#todo(make the table work better, it is getting the first column name as '# SN' rather then 'SN')
@@ -72,14 +72,13 @@ def correct_galaxy(telescope, n=9):
 		# get WCS data & convert SN position to pixel
 		if telescope == 'hst':
 			w = WCS(hdu[1].header)
+			x_sn, y_sn = w.all_world2pix(position.ra.to(u.deg).value, position.dec.to(u.deg).value, 1) #this should be better, do it all at once?
 		elif telescope == 'sdss':
 			w = WCS(hdu[0].header)
-		x_sn, y_sn = w.all_world2pix(position.ra.to(u.deg).value, position.dec.to(u.deg).value, 1) #this should be better, do it all at once?
+			x_sn, y_sn = w.all_world2pix(position.dec.to(u.deg).value, position.ra.to(u.deg).value, 1)    #need to do this because of astorpy issue #4976
 		#all_world2pix gives non-whole numbers
 		x_sn, y_sn = round(x_sn), round(y_sn) #can do np.round (returns lists) or round (returns value)
 
-		print('SN : ', position.to_string('dms'))
-		print('SN pixel: ', x_sn, y_sn)
 		###### Plot ######
 		# figure out region to plot
 		center = (x, y)
@@ -95,14 +94,13 @@ def correct_galaxy(telescope, n=9):
 		# plot data
 		if telescope == 'hst':
 			plt.imshow(data, origin='lower', cmap='cubehelix', clim=(0, 1))
-			plt.plot(x_sn, y_sn, marker='*', markersize=15, markerfacecolor='r', markeredgecolor='w')
 			plt.xlabel('RA')
 			plt.ylabel('Dec')
 		if telescope == 'sdss':
 			plt.imshow(data, origin='lower', cmap='cubehelix', clim=(5, 40))
-			plt.plot(y_sn, x_sn, marker='*', markersize=45, markerfacecolor='r', markeredgecolor='w')
 			plt.xlabel('Dec')
 			plt.ylabel('RA')
+		plt.plot(x_sn, y_sn, marker='*', markersize=15, markerfacecolor='r', markeredgecolor='w')
 		plt.colorbar()
 
 		# plot elipse
@@ -114,9 +112,6 @@ def correct_galaxy(telescope, n=9):
 		# clip figure and add labels
 		plt.xlim(x_plot[0], x_plot[1])
 		plt.ylim(y_plot[0], y_plot[1]) 
-
-		plt.show()
-		import sys; sys.exit()
 
 		#save figure
 		folder = 'test_results/correct_galaxy/'+currentTime.strftime("%Y-%m-%d %H:%M:%S")
