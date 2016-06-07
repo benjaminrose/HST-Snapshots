@@ -274,6 +274,7 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     """
     #break out if I don't have these sdss files
     if SNNumber in [12928, 15171, 19023]:
+        # These dont exists yet. Also in fractionalRank.py:l322
         return None
     print("running SN{}".format(SNNumber))
 

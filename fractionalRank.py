@@ -20,341 +20,374 @@ from astropy.wcs import WCS
 import ancillary
 
 def get_SN_SDSS_coord(SNID):
-	"""
-	Gets the cooridnates, in SDSS system, of a given SN defined by its SDSS SN 
-	identification number. The data is taken from photometric data stored in 
-	`data/SDSS - photometry/` from 
-	`http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html`.
-	#todo(figure out the paper that this is from)
+    """
+    Gets the cooridnates, in SDSS system, of a given SN defined by its SDSS SN 
+    identification number. The data is taken from photometric data stored in 
+    `data/SDSS - photometry/` from 
+    `http://sdssdp62.fnal.gov/sdsssn/DataRelease/index.html`.
+    #todo(figure out the paper that this is from)
 
-	# Parameters 
-	SNID: int
-		The identification number of the SDSS Supernova, used in file names.
-	
-	# Returns
-	SNPosition : astopy.SkyCoord
-		The position of the SN found in SDSS Photomentric data. 
-	"""
-	data_location='data/SDSS - photometry/'
+    # Parameters 
+    SNID: int
+        The identification number of the SDSS Supernova, used in file names.
+    
+    # Returns
+    SNPosition : astopy.SkyCoord
+        The position of the SN found in SDSS Photomentric data. 
+    """
+    data_location='data/SDSS - photometry/'
 
-	# read from SDSS files SN's RA & Dec
-	SNID_string = str(SNID).zfill(6)        #pad with zeros to match SMP
-	with open(data_location+'SMP_{0}.dat'.format(SNID_string), 'r') as f:
-		first_line = f.readline()
-	
-	# split on white space, convert numpy array so np.where works
-	split = np.array( re.split(r'\s+', first_line) )
-	RAValueLocation = np.where(np.array(split) == 'RA:')[0][0]+1
-	DecValueLocation = np.where(np.array(split) == 'DEC:')[0][0]+1
+    # read from SDSS files SN's RA & Dec
+    SNID_string = str(SNID).zfill(6)        #pad with zeros to match SMP
+    with open(data_location+'SMP_{0}.dat'.format(SNID_string), 'r') as f:
+        first_line = f.readline()
+    
+    # split on white space, convert numpy array so np.where works
+    split = np.array( re.split(r'\s+', first_line) )
+    RAValueLocation = np.where(np.array(split) == 'RA:')[0][0]+1
+    DecValueLocation = np.where(np.array(split) == 'DEC:')[0][0]+1
 
-	# create SkyCoord
-	RA = float(split[RAValueLocation])*u.deg
-	Dec = float(split[DecValueLocation])*u.deg
-	
-	SNPosition = SkyCoord(ra = RA, dec = Dec)
-	#todo(Determing if this is the correct frame: FK5, icrs, etc.)
+    # create SkyCoord
+    RA = float(split[RAValueLocation])*u.deg
+    Dec = float(split[DecValueLocation])*u.deg
+    
+    SNPosition = SkyCoord(ra = RA, dec = Dec)
+    #todo(Determing if this is the correct frame: FK5, icrs, etc.)
 
-	return SNPosition
+    return SNPosition
 
 def get_SN_HST_coord(SNID):
-	"""
-	Gets the cooridnates, in HST system, of a given SN defined by its SDSS SN 
-	identification number. The data has a shift applied to change from the 
-	SDSS to HST WCS.
+    """
+    Gets the cooridnates, in HST system, of a given SN defined by its SDSS SN 
+    identification number. The data has a shift applied to change from the 
+    SDSS to HST WCS.
 
-	# Parameters
-	SNID : int
-		The identification number of the SDSS Supernova, used in file names.
+    # Parameters
+    SNID : int
+        The identification number of the SDSS Supernova, used in file names.
 
-	# Returns
-	SNPosition : astopy.SkyCoord
-		The position of the SN, with SDSS-to-HST shift applied. Shifts are 
-		defined in `resources/shift.csv` and reasoning can be found in 
-		`README.md`
-	"""
-	# get position from SDSS information
-	SDSS_SNPosition = get_SN_SDSS_coord(SNID)
-	print('SDSS position: ', SDSS_SNPosition.to_string(style=u'hmsdms'))
+    # Returns
+    SNPosition : astopy.SkyCoord
+        The position of the SN, with SDSS-to-HST shift applied. Shifts are 
+        defined in `resources/shift.csv` and reasoning can be found in 
+        `README.md`
+    """
+    # get position from SDSS information
+    SDSS_SNPosition = get_SN_SDSS_coord(SNID)
+    print('SDSS position: ', SDSS_SNPosition.to_string(style=u'hmsdms'))
 
-	#skip 13038 because I don't have a shift
-	if SNID == 13038:
-		import warnings
-		warnings.warn('SN13038 does not have a shift')
-		SNPosition = SDSS_SNPosition
-	else:
-		# import shift data
-		#todo(change this location to be dataset.csv)
-		shift = Table.read('resources/shift.csv', format='ascii.commented_header')
-		#todo(add units to table, from shift.meta)
-		shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
+    #skip 13038 because I don't have a shift
+    if SNID == 13038:
+        import warnings
+        warnings.warn('SN13038 does not have a shift')
+        SNPosition = SDSS_SNPosition
+    else:
+        # import shift data
+        #todo(change this location to be dataset.csv)
+        shift = Table.read('resources/shift.csv', format='ascii.commented_header')
+        #todo(add units to table, from shift.meta)
+        shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
 
-		# apply shift with delta = HST - SDSS or HST = delta + SDSS
-		deltaRA = Longitude(
-			shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity
-			)
-		deltaDec = Latitude(
-			shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity
-			)
-		SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
-							  dec = deltaDec + SDSS_SNPosition.dec)
-		print('deltas: ', deltaRA, deltaDec)
-		print('SNPosition: ', SNPosition.to_string(style=u'hmsdms'))
-	return SNPosition
+        # apply shift with delta = HST - SDSS or HST = delta + SDSS
+        deltaRA = Longitude(
+            shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity
+            )
+        deltaDec = Latitude(
+            shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity
+            )
+        SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
+                              dec = deltaDec + SDSS_SNPosition.dec)
+        print('deltas: ', deltaRA, deltaDec)
+        print('SNPosition: ', SNPosition.to_string(style=u'hmsdms'))
+    return SNPosition
 
 def get_galaxy_pixels(hdu, sciData=None):
-	"""
-	Returns the numerical value of the pixels for the host galaxy of `SNID`
+    """
+    Returns the numerical value of the pixels for the host galaxy of `SNID`
 
-	# Parameters
-	hdu : astropy.io.fits.hdu.hdulist.HDUList
-		The fits object from the data extension. This needs to cantain a 
-		WCS. Assumes its an HST style object with WCS in extention `1`.
+    # Parameters
+    hdu : astropy.io.fits.hdu.hdulist.HDUList
+        The fits object from the data extension. This needs to cantain a 
+        WCS. Assumes its an HST style object with WCS in extention `1`.
 
-	sciData : np.array, optional
-		A 2D array of the sciecne data from the CCD Chip. If science data is 
-		not given then it will be extracted. Provide pre-extracted data if any 
-		manipulation is needed prior to analaysis, ie byteswap.
+    sciData : np.array, optional
+        A 2D array of the sciecne data from the CCD Chip. If science data is 
+        not given then it will be extracted. Provide pre-extracted data if any 
+        manipulation is needed prior to analaysis, ie byteswap.
 
-	# Returns
-	galaxy : np.array
-		A 1D array of all the value of the pixels of the galaxy. Unsorted, 
-		or not?
-	"""
-	# get science data if needed
-	if sciData is None:
-		sciData = hdu.data
+    # Returns
+    galaxy : np.array
+        A 1D array of all the value of the pixels of the galaxy. Unsorted, 
+        or not?
+    """
+    # get science data if needed
+    if sciData is None:
+        sciData = hdu.data
 
-	# init mask that defines pixels belonging to host
-	mask = np.zeros(sciData.shape)
+    # init mask that defines pixels belonging to host
+    mask = np.zeros(sciData.shape)
 
-	# get galaxy definition & format its astorpy.table object
-	galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
-	# table headers are: SN ID, npix, x, y, a, b, theta
-	# add apropriate units to the table.
-	galaxyData['theta'].unit = u.radian  
-	# make the rows follow the SNID
-	# SN ID might be 'SN number' or 'SN name'. I have issues with conistency
-	galaxyData.add_index('SN ID')
-	#todo(I might need to not read this in each time, but rather take it as a parmeter?)
-	
-	hostParams = galaxyData.loc[2635]
-	#todo(2635 needs to be a parameter)
-	hostParams = Table(hostParams)     #convert to a Table because Rows suck
+    # get galaxy definition & format its astorpy.table object
+    galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
+    # table headers are: SN ID, npix, x, y, a, b, theta
+    # add apropriate units to the table.
+    galaxyData['theta'].unit = u.radian  
+    # make the rows follow the SNID
+    # SN ID might be 'SN number' or 'SN name'. I have issues with conistency
+    galaxyData.add_index('SN ID')
+    #todo(I might need to not read this in each time, but rather take it as a parmeter?)
+    
+    hostParams = galaxyData.loc[2635]
+    #todo(2635 needs to be a parameter)
+    hostParams = Table(hostParams)     #convert to a Table because Rows suck
 
-	# sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
+    # sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
 
-	# init variables for ellipse equation
-	ctheta = np.cos(hostParams['theta'].to(u.radian).value)
-	stheta = np.sin(hostParams['theta'].to(u.radian).value)
+    # init variables for ellipse equation
+    ctheta = np.cos(hostParams['theta'].to(u.radian).value)
+    stheta = np.sin(hostParams['theta'].to(u.radian).value)
 
-	# search a section of mask, and update part inside to be 1.
+    # search a section of mask, and update part inside to be 1.
 
-	# define a search radius as the largest of the two axis + 5 pixels
-	r = np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
+    # define a search radius as the largest of the two axis + 5 pixels
+    r = np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
 
-	for x_index in np.arange(-r, r+1)+hostParams['x'].quantity:
-		for y_index in np.arange(-r, r+1)+hostParams['y'].quantity:
-			#defing the canonical part of the equation
-			x_can = (x_index - hostParams['x'].quantity)*ctheta + (y_index - hostParams['y'].quantity)*stheta
-			y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
-			if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
-				mask[int(y_index), int(x_index)] = 1.0 
-	            #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints? The parameters are too small, but we do need to est that selecting the pixels are the same as what is inside the ellipse.)
+    for x_index in np.arange(-r, r+1)+hostParams['x'].quantity:
+        for y_index in np.arange(-r, r+1)+hostParams['y'].quantity:
+            #defing the canonical part of the equation
+            x_can = (x_index - hostParams['x'].quantity)*ctheta + (y_index - hostParams['y'].quantity)*stheta
+            y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
+            if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
+                mask[int(y_index), int(x_index)] = 1.0 
+                #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints? The parameters are too small, but we do need to est that selecting the pixels are the same as what is inside the ellipse.)
 
-	# create a nd.array of the pixel values inside the galaxy.
-	sciDataFlattened = (mask*sciData).flatten()
-	ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
+    # create a nd.array of the pixel values inside the galaxy.
+    sciDataFlattened = (mask*sciData).flatten()
+    ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
 
-	return ranked
+    return ranked
 
-def get_sn_value(position, hdu, sciData=None):
-	"""
-	Returns the numerical value of the pixels for the SN
+def get_sn_value(position, hdu, sciData=None, key=''):
+    """
+    Returns the numerical value of the pixels for the SN
 
-	# Parameters
-	position : astropy.SkyCoord
-		The position of the SN. It will be used with the WCS found in `hdu`.
+    # Parameters
+    position : astropy.SkyCoord
+        The position of the SN. It will be used with the WCS found in `hdu`.
 
-	hdu : astropy.io.fits.hdu.hdulist.HDUList
-		The fits object from the data extension. This needs to cantain a 
-		WCS. Assumes its an HST style object with WCS in extention `1`.
+    hdu : astropy.io.fits.hdu.hdulist.HDUList
+        The fits object from the data extension. This needs to cantain a 
+        WCS. Assumes its an HST style object with WCS in extention `1`.
 
-	sciData : np.array, optional
-		A 2D array of the sciecne data from the CCD Chip. If science data is 
-		not given then it will be extracted. Provide pre-extracted data if any 
-		manipulation is needed prior to analaysis, ie byteswap.
+    sciData : np.array, optional
+        A 2D array of the sciecne data from the CCD Chip. If science data is 
+        not given then it will be extracted. Provide pre-extracted data if any 
+        manipulation is needed prior to analaysis, ie byteswap.
 
-	# Returns
-	sn : float
-		The pixel value of the
-	"""
-	# get science data if needed
-	if sciData is None:
-		sciData = hdu.data
+    key : string
+        use the strings `'hst'` or `'sdss'` to designate what galaxy source you
+        want to use to calcualte the fpr.
 
-	# get world cordinate system
-	# can't just do `WCS('filename')` because of HST has multihead fits files
-	w = WCS(hdu[1].header)
+    # Returns
+    sn : float
+        The pixel value of the
+    """
+    # get science data if needed
+    if sciData is None:
+        sciData = hdu.data
 
-	# Get SN's pixle position
-	# astopy.wcs.WCS only degrees as floats
-	# origin is `0` because we will be working with `sciData`
-	#todo(this is doing this wrong. It does not agree with what DS9 says the pixel value should be for that WCS location.)
-	print('position: ', position)
-	print(position.ra.to(u.deg).value, position.dec.to(u.deg).value)
-	SNPixels = w.all_world2pix(
-		position.ra.to(u.deg).value, 
-		position.dec.to(u.deg).value, 
-		0
-		)
-	print('pixels: ', SNPixels)
-	# can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
-	SNPixels = np.round(SNPixels)        # now a veritcal np.array
+    # get world cordinate system
+    # can't just do `WCS('filename')` because of HST has multihead fits files
+    if key == 'hst':
+        w = WCS(hdu[1].header)
+    elif key == 'sdss':
+        w = WCS(hdu[0].header)
+    else:
+        raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
 
-	# Get value of SN's pixel
-	#take median of 3x3 box. 
-	sn = np.array([])
-	for i in [-1,0,1]:
-		for j in [-1,0,1]:
-			# numpy.arrays are accessed row then collumn and `all_pix2wold()`
-			# returns (x, y) so we need to call sciData[row #,column #]
-			sn = np.append(sn, sciData[SNPixels[1,0]+i, SNPixels[0,0]+j])
-	sn = np.median(sn)
-	#todo(do I want median or mean?)
+    # Get SN's pixle position
+    # astopy.wcs.WCS only degrees as floats
+    # origin is `0` because we will be working with `sciData`
+    #todo(this is doing this wrong. It does not agree with what DS9 says the pixel value should be for that WCS location.)
+    print('position: ', position)
+    print(position.ra.to(u.deg).value, position.dec.to(u.deg).value)
+    if key == 'hst':
+        SNPixels = w.all_world2pix(
+        position.ra.to(u.deg).value, 
+        position.dec.to(u.deg).value, 
+        0
+        )
+    elif key == 'sdss':
+        #stupid SDSS! Astropy issue #4976 should be able to make this better
+        SNPixels = w.all_world2pix( 
+        position.dec.to(u.deg).value,
+        position.ra.to(u.deg).value, 
+        0
+        )
+    else:
+        raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
+    print('pixels: ', SNPixels)
+    # can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
+    SNPixels = np.round(SNPixels)        # now a veritcal np.array
 
-	return sn
+    # Get value of SN's pixel
+    #take median of 3x3 box. 
+    sn = np.array([])
+    for i in [-1,0,1]:
+        for j in [-1,0,1]:
+            # numpy.arrays are accessed row then collumn and `all_pix2wold()`
+            # returns (x, y) so we need to call sciData[row #,column #]
+            sn = np.append(sn, sciData[SNPixels[1,0]+i, SNPixels[0,0]+j])
+    sn = np.median(sn)
+    #todo(do I want median or mean?)
+
+    return sn
 
 
 def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
-	"""
-	Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
-	case of the pixel that hosted the SN. It is ok if `SN` is or is not found 
-	in `galaxy`.
+    """
+    Fractional Pixel Rank (FPR) is CDF value of a particular number, in this 
+    case of the pixel that hosted the SN. It is ok if `SN` is or is not found 
+    in `galaxy`.
 
-	# Parameters
-	galaxy : np.array
-		The float value of the galaxy pixels. 
+    # Parameters
+    galaxy : np.array
+        The float value of the galaxy pixels. 
 
-	SN : float
-		The value of the pixel (actual, median of a 3x3 grid or etc) where the 
-		SN went off.
+    SN : float
+        The value of the pixel (actual, median of a 3x3 grid or etc) where the 
+        SN went off.
 
-	# Returns
-	fpr : float
-		The fractional pixel rank. 
-	"""
-	#todo(if SN pixel value is less then galaxy edge cut off (look this up), then break and return 0 or -1? This minght need to be done in `get_pixels()` or `get_pixels()` might not be a useful function.)
+    # Returns
+    fpr : float
+        The fractional pixel rank. 
+    """
+    #todo(if SN pixel value is less then galaxy edge cut off (look this up), then break and return 0 or -1? This minght need to be done in `get_pixels()` or `get_pixels()` might not be a useful function.)
 
-	# calculate the FPR with range [0,1] both inclusive.
-	galaxy.sort()
-	
-	# You can't simple do the interpelation for the whole CDF. CDFs are too 
-	# jumpy/verticle for `scipy.interpolate` to work well. It works fine 
-	# between two points but not for the whole range. See notes on 2016-03-14.
+    # calculate the FPR with range [0,1] both inclusive.
+    galaxy.sort()
+    
+    # You can't simple do the interpelation for the whole CDF. CDFs are too 
+    # jumpy/verticle for `scipy.interpolate` to work well. It works fine 
+    # between two points but not for the whole range. See notes on 2016-03-14.
 
-	# since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
-	rank = np.where(galaxy == SN)[0]
+    # since galaxy is a 1d array, there is a non-needed tuple wrapper around the result of `np.where()`
+    rank = np.where(galaxy == SN)[0]
 
-	#if `SN` is found in `galaxy` calculate its FPR (or the mean of its FPRs) driectly
-	if len(rank) > 0:
-		# subtact 1 so that the denominator is equal to the largest rank can be.
-		# Notes are available from 2015-03-09
-		fpr = 1.0*rank/(len(galaxy)-1.0)
-		if len(fpr) > 1:
-			fpr = fpr.mean()
-	# if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
-	else:
-		# find nearist neighbors in galaxy and coresponding CDF values
-		# find last entry position of where galaxy is less then N
-		# `np.where()` returns a tuple where we only care about arg-0.
-		#breaks if SN value is smaller then galaxy. #todo(fix)
-		rank_min = np.where(galaxy[galaxy < SN])[0][-1]
-		# find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
-		rank_max = rank_min + 1
-		fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
-		fpr_max = 1.0*rank_max/(len(galaxy)-1.0)
-		f = interpolate.interp1d([galaxy[rank_min], galaxy[rank_max]]
-								,[fpr_min, fpr_max])
+    #if `SN` is found in `galaxy` calculate its FPR (or the mean of its FPRs) driectly
+    if len(rank) > 0:
+        # subtact 1 so that the denominator is equal to the largest rank can be.
+        # Notes are available from 2015-03-09
+        fpr = 1.0*rank/(len(galaxy)-1.0)
+        if len(fpr) > 1:
+            fpr = fpr.mean()
+    # if `SN` is NOT found in `galaxy` calculate its FPR by interpolation
+    else:
+        # find nearist neighbors in galaxy and coresponding CDF values
+        # find last entry position of where galaxy is less then N
+        # `np.where()` returns a tuple where we only care about arg-0.
+        #breaks if SN value is smaller then galaxy. #todo(fix)
+        rank_min = np.where(galaxy[galaxy < SN])[0][-1]
+        print(rank_min, len(galaxy))
+        # find first entry of where galaxy is greater then SN (or add 1 to `rank_min`)
+        rank_max = rank_min + 1
+        fpr_min = 1.0*rank_min/(len(galaxy)-1.0)
+        fpr_max = 1.0*rank_max/(len(galaxy)-1.0)
+        if fpr_min == 1:
+            fpr = 1.0
+        else:
+            f = interpolate.interp1d([galaxy[rank_min], galaxy[rank_max]]
+                                    ,[fpr_min, fpr_max])
+            fpr = f(SN)
+    return fpr
 
-		fpr = f(SN)
-	return fpr
+def main(key, SNID = 2635):
+    """
+    This is the default method for calculucating fractional pixel rank for a
+    single SN and it's SDSS host. This is set up so `map()` can be used to
+    iterate through all the SN while calling `main_sdss()`.
 
+    # Parameters
+    key : string
+        use the strings `'hst'` or `'sdss'` to designate what galaxy source you
+        want to use to calcualte the fpr.
 
-def main(SNID = 2635):
-	"""
-	This is the default method for calculucating fractional pixel rank for a
-	single SN and it's host. This is set up so `map()` can be used to iterate 
-	through all the SN while calling `main()`.
+    SNID : int
+        The numerical SDSS ID for the SN.
 
-	# Parameters
-	SNID : int
-		The numerical SDSS ID for the SN.
+    # Notes
+    This method saves three files to `'resources/SN{0}/'.format(SNID)`. They 
+    are `SN*_{key}_host_pixel_values.csv`, `SN*_{key}_pixel_values.csv`, and
+    `SN*_{key}_fpr.csv`. Currently it cannot make the folders, `SN*`. This
+    needs to be updated.
+    """
+    # get SN position
+    print('getting SN position')
+    position = get_SN_HST_coord(SNID)
 
-	# Notes
-	This method saves three files to `'resources/SN{0}/'.format(SNID)`. They 
-	are `SN*_host_pixel_values.csv`, `SN*_pixel_values.csv`, and `SN*_fpr.csv`.
-	Currently it can not make the folders, `SN*`. This needs to be updated.
-	"""
-	# get SN position
-	print('getting SN position')
-	position = get_SN_HST_coord(SNID)
+    # get hdu and extract science data
+    print('getting HDU and SciData')
+    if key == 'hst':
+        filePath = 'data/HST - combined/SN{0}_combined.fits'
+        hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+    elif key == 'sdss':
+        filePath = 'data/SDSS - coadded/SN{0}-g.fits'
+        if SNID in [12928, 15171, 19023]:
+            # These dont exists yet. Also in defGalaxy.py:l246
+            return None
+        else:
+            hdu, scidata = ancillary.import_fits(filePath.format(SNID))
+    else:
+        raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
 
-	# get hdu and extract science data
-	print('getting HDU and SciData')
-	filePath = 'data/HST - combined/SN{0}_combined.fits'
-	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+    # get pixel values of galaxy and SN
+    print('getting galaxy pixels values')
+    galaxy_pixels = get_galaxy_pixels(hdu, scidata)
+    print(galaxy_pixels)
+    print('getting SN pixel value')
+    print('SN location to pixel is wrong')
+    sn_pixel_value = get_sn_value(position, hdu, scidata, key)
+    print(sn_pixel_value)
 
-	# get 
-	print('getting galaxy pixels values')
-	galaxy_pixels = get_galaxy_pixels(hdu, scidata)
-	print(galaxy_pixels)
-	print('getting SN pixel value')
-	print('SN location to pixel is wrong')
-	sn_pixel_value = get_sn_value(position, hdu, scidata)
-	print(sn_pixel_value)
+    # get Fractional Pixel Rank
+    print('getting FPR')
+    fpr = get_FPR(galaxy_pixels, sn_pixel_value)
+    print(fpr)
 
-	# get Fractional Pixel Rank
-	print('getting FPR')
-	fpr = get_FPR(galaxy_pixels, sn_pixel_value)
-	print(fpr)
-
-	# save data
-	save_location = 'resources/SN{0}/'.format(SNID)
-	#todo(make `save_location` directory)
-	#todo(what in the world am I doing? How do I want this saved? Updating a csv? Creating a new one? -- a new one for at least galaxy.)
-	np.savetxt(save_location+'SN{0}_host_pixel_values.csv'.format(SNID), galaxy_pixels, delimiter=',', header="The pixel values of SN{} host galaxy. The galaxy's edge is defined hard coded currently".format(SNID))
-	np.savetxt(save_location+'SN{0}_pixel_values.csv'.format(SNID), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID))
-	np.savetxt(save_location+'SN{0}_fpr.csv'.format(SNID), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID))
-
-	return None
+    # save data
+    save_location = 'resources/SN{0}/'.format(SNID)
+    #todo(make it so a new folder can be made if need be.)
+    np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), galaxy_pixels, delimiter=',', header="The pixel values of SN{0} host galaxy from {1}. The galaxy's edge is defined hard coded currently".format(SNID, key))
+    np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID)+' as seen by '+key)
+    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calcuated with '+key)
 
 if __name__ == "__main__":
-	# main()
+    main('sdss')
 
-	###########################################
-	## Testing if pixel value is correct for SN
-	###########################################
-	SNID = 2635
-	print('getting SN position')
-	position = get_SN_HST_coord(SNID)
+    ###########################################
+    ## Testing if pixel value is correct for SN
+    ###########################################
+    # SNID = 2635
+    # print('getting SN position')
+    # position = get_SN_HST_coord(SNID)
 
-	# get hdu and extract science data
-	print('getting HDU and SciData')
-	filePath = 'data/HST - combined/SN{0}_combined.fits'
-	hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
+    # # get hdu and extract science data
+    # print('getting HDU and SciData')
+    # filePath = 'data/HST - combined/SN{0}_combined.fits'
+    # hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
 
-	print('getting SN pixel value')
-	print('SN location to pixel is wrong')
-	sn_pixel_value = get_sn_value(position, hdu, scidata)
-	print(sn_pixel_value)
+    # print('getting SN pixel value')
+    # print('SN location to pixel is wrong')
+    # sn_pixel_value = get_sn_value(position, hdu, scidata)
+    # print(sn_pixel_value)
 
 
 
-	# SNID = 2635
-	# position = get_SN_HST_coord(SNID)
+    # SNID = 2635
+    # position = get_SN_HST_coord(SNID)
 
-	# # galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
-	# # print galaxy, SN
+    # # galaxy, SN = get_pixels(SNID, position) #a sup-part of `get_FPR`, for testing
+    # # print galaxy, SN
 
-	# fpr = get_FPR(SNID, position)#, position)
-	# print fpr
+    # fpr = get_FPR(SNID, position)#, position)
+    # print fpr
