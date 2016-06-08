@@ -16,6 +16,7 @@ from astropy.coordinates import SkyCoord, Latitude, Longitude
 from astropy import units as u
 from astropy.table import Table
 from astropy.wcs import WCS
+from sep import mask_ellipse
 
 import ancillary
 
@@ -89,11 +90,13 @@ def get_SN_HST_coord(SNID):
         shift['delta RA'].unit, shift['delta Dec'].unit = u.arcsec, u.arcsec
 
         # apply shift with delta = HST - SDSS or HST = delta + SDSS
+        # `[0]` are added to drop unneeded array wrapper. 
+        # It also makes an internal standard between hst-coords and sdss-cords
         deltaRA = Longitude(
-            shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity
+            shift[shift['SDSS SN Name'] == SNID]['delta RA'].quantity[0]
             )
         deltaDec = Latitude(
-            shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity
+            shift[shift['SDSS SN Name'] == SNID]['delta Dec'].quantity[0]
             )
         SNPosition = SkyCoord(ra = deltaRA + SDSS_SNPosition.ra,
                               dec = deltaDec + SDSS_SNPosition.dec)
@@ -101,11 +104,16 @@ def get_SN_HST_coord(SNID):
         print('SNPosition: ', SNPosition.to_string(style=u'hmsdms'))
     return SNPosition
 
-def get_galaxy_pixels(hdu, sciData=None):
+def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     """
-    Returns the numerical value of the pixels for the host galaxy of `SNID`
+    Returns the numerical value of the pixels for the host galaxy of `SNID`.
+    Uses the 25 mag/sqr-arcsec limit for a `key` of `hst` and `2-sigma` for a
+    `key` of `sdss`.
 
     # Parameters
+    SNID : int
+        The numerical SDSS ID for the SN.
+
     hdu : astropy.io.fits.hdu.hdulist.HDUList
         The fits object from the data extension. This needs to cantain a 
         WCS. Assumes its an HST style object with WCS in extention `1`.
@@ -114,6 +122,10 @@ def get_galaxy_pixels(hdu, sciData=None):
         A 2D array of the sciecne data from the CCD Chip. If science data is 
         not given then it will be extracted. Provide pre-extracted data if any 
         manipulation is needed prior to analaysis, ie byteswap.
+
+    key : string
+        use the strings `'hst'` or `'sdss'` to designate what galaxy source you
+        want to use to calcualte the fpr.
 
     # Returns
     galaxy : np.array
@@ -125,22 +137,37 @@ def get_galaxy_pixels(hdu, sciData=None):
         sciData = hdu.data
 
     # init mask that defines pixels belonging to host
-    mask = np.zeros(sciData.shape)
+    mask = np.zeros(sciData.shape, dtype=np.bool)
 
     # get galaxy definition & format its astorpy.table object
-    galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)
+    # galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)    #hardcoded for testing
+    if key == 'hst':
+        galaxyData = Table.read('resources/hosts_25.csv', format='ascii.commented_header', header_start=2)
+    elif key == 'sdss':
+        galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.commented_header', header_start=2)
+    else:
+        raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
     # table headers are: SN ID, npix, x, y, a, b, theta
     # add apropriate units to the table.
     galaxyData['theta'].unit = u.radian  
     # make the rows follow the SNID
-    # SN ID might be 'SN number' or 'SN name'. I have issues with conistency
-    galaxyData.add_index('SN ID')
+    # SN ID might be 'SN number' or 'SN name' or 'SN'. I have issues with conistency
+    galaxyData.add_index('SN')
     #todo(I might need to not read this in each time, but rather take it as a parmeter?)
     
     hostParams = galaxyData.loc[2635]
     #todo(2635 needs to be a parameter)
     hostParams = Table(hostParams)     #convert to a Table because Rows suck
 
+    # set scalling factor for host parameters. Silly `SE` and `sep`!
+    n = 3 
+    print(hostParams['x'].quantity[0], hostParams['y'].quantity,
+                 hostParams['a'].quantity, hostParams['b'].quantity, 
+                 hostParams['theta'].to(u.radian).value, n)
+    mask_ellipse(mask, hostParams['x'].quantity[0], hostParams['y'].quantity[0]
+                , hostParams['a'].quantity[0], hostParams['b'].quantity[0] 
+                , hostParams['theta'].to(u.radian).value[0], n)
+    '''
     # sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
 
     # init variables for ellipse equation
@@ -150,17 +177,17 @@ def get_galaxy_pixels(hdu, sciData=None):
     # search a section of mask, and update part inside to be 1.
 
     # define a search radius as the largest of the two axis + 5 pixels
-    r = np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
+    r = n*np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
 
     for x_index in np.arange(-r, r+1)+hostParams['x'].quantity:
         for y_index in np.arange(-r, r+1)+hostParams['y'].quantity:
             #defing the canonical part of the equation
             x_can = (x_index - hostParams['x'].quantity)*ctheta + (y_index - hostParams['y'].quantity)*stheta
             y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
-            if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= 1: 
+            if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= n: 
                 mask[int(y_index), int(x_index)] = 1.0 
                 #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints? The parameters are too small, but we do need to est that selecting the pixels are the same as what is inside the ellipse.)
-
+    '''
     # create a nd.array of the pixel values inside the galaxy.
     sciDataFlattened = (mask*sciData).flatten()
     ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
@@ -196,6 +223,9 @@ def get_sn_value(position, hdu, sciData=None, key=''):
     if sciData is None:
         sciData = hdu.data
 
+    # Clean up position
+    #The results from HST
+
     # get world cordinate system
     # can't just do `WCS('filename')` because of HST has multihead fits files
     if key == 'hst':
@@ -229,7 +259,6 @@ def get_sn_value(position, hdu, sciData=None, key=''):
     print('pixels: ', SNPixels)
     # can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
     SNPixels = np.round(SNPixels)        # now a veritcal np.array
-
     # Get value of SN's pixel
     #take median of 3x3 box. 
     sn = np.array([])
@@ -237,7 +266,7 @@ def get_sn_value(position, hdu, sciData=None, key=''):
         for j in [-1,0,1]:
             # numpy.arrays are accessed row then collumn and `all_pix2wold()`
             # returns (x, y) so we need to call sciData[row #,column #]
-            sn = np.append(sn, sciData[SNPixels[1,0]+i, SNPixels[0,0]+j])
+            sn = np.append(sn, sciData[SNPixels[1]+i, SNPixels[0]+j])
     sn = np.median(sn)
     #todo(do I want median or mean?)
 
@@ -321,16 +350,22 @@ def main(key, SNID = 2635):
     `SN*_{key}_fpr.csv`. Currently it cannot make the folders, `SN*`. This
     needs to be updated.
     """
-    # get SN position
-    print('getting SN position')
-    position = get_SN_HST_coord(SNID)
-
-    # get hdu and extract science data
-    print('getting HDU and SciData')
     if key == 'hst':
+        # get SN position
+        print('getting SN position')
+        position = get_SN_HST_coord(SNID)
+        
+        # get hdu and extract science data
+        print('getting HDU and SciData')
         filePath = 'data/HST - combined/SN{0}_combined.fits'
         hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
     elif key == 'sdss':
+        # get SN position
+        print('getting SN position')
+        position = get_SN_SDSS_coord(SNID)
+        
+        # get hdu and extract science data
+        print('getting HDU and SciData')
         filePath = 'data/SDSS - coadded/SN{0}-g.fits'
         if SNID in [12928, 15171, 19023]:
             # These dont exists yet. Also in defGalaxy.py:l246
@@ -342,7 +377,7 @@ def main(key, SNID = 2635):
 
     # get pixel values of galaxy and SN
     print('getting galaxy pixels values')
-    galaxy_pixels = get_galaxy_pixels(hdu, scidata)
+    galaxy_pixels = get_galaxy_pixels(SNID, hdu, scidata, key=key)
     print(galaxy_pixels)
     print('getting SN pixel value')
     print('SN location to pixel is wrong')
