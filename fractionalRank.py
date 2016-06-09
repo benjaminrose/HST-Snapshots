@@ -167,27 +167,7 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     mask_ellipse(mask, hostParams['x'].quantity[0], hostParams['y'].quantity[0]
                 , hostParams['a'].quantity[0], hostParams['b'].quantity[0] 
                 , hostParams['theta'].to(u.radian).value[0], n)
-    '''
-    # sn, position, x, y, a, b, theta in zip(SN_num, positions, galaxies['x'], galaxies['y'], galaxies['a'], galaxies['b'], galaxies['theta'].quantity):
 
-    # init variables for ellipse equation
-    ctheta = np.cos(hostParams['theta'].to(u.radian).value)
-    stheta = np.sin(hostParams['theta'].to(u.radian).value)
-
-    # search a section of mask, and update part inside to be 1.
-
-    # define a search radius as the largest of the two axis + 5 pixels
-    r = n*np.ceil(max(hostParams['a'].quantity, hostParams['b'].quantity))
-
-    for x_index in np.arange(-r, r+1)+hostParams['x'].quantity:
-        for y_index in np.arange(-r, r+1)+hostParams['y'].quantity:
-            #defing the canonical part of the equation
-            x_can = (x_index - hostParams['x'].quantity)*ctheta + (y_index - hostParams['y'].quantity)*stheta
-            y_can = -(x_index - hostParams['x'].quantity)*stheta + (y_index - hostParams['y'].quantity)*ctheta
-            if (x_can**2)/(hostParams['a'].quantity/2)**2 + (y_can**2)/(hostParams['b'].quantity/2)**2 <= n: 
-                mask[int(y_index), int(x_index)] = 1.0 
-                #todo(does this work correcty. make a test to plot the resulting mask and ellipse. Should x_index and y_index be ints? The parameters are too small, but we do need to est that selecting the pixels are the same as what is inside the ellipse.)
-    '''
     # create a nd.array of the pixel values inside the galaxy.
     sciDataFlattened = (mask*sciData).flatten()
     ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
