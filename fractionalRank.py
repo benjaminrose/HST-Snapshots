@@ -343,7 +343,7 @@ def main(key, SNID = 2635):
     """
     if key == 'hst':
         # get SN position
-        print('getting SN position')
+        print('getting SN{} position'.format(SNID))
         position = get_SN_HST_coord(SNID)
         
         # get hdu and extract science data
@@ -353,13 +353,14 @@ def main(key, SNID = 2635):
     elif key == 'sdss':
         # skip over sdss images I do not have
         if SNID in [12928, 15171, 19023]:
+            save_location = 'resources/SN{0}/'.format(SNID)
             np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
             np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
             np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
             return None
 
         # get SN position
-        print('getting SN position')
+        print('getting SN{} position'.format(SNID))
         position = get_SN_SDSS_coord(SNID)
         
         # get hdu and extract science data
@@ -399,7 +400,12 @@ def main(key, SNID = 2635):
     np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calcuated with '+key)
 
 if __name__ == "__main__":
-    main('hst', SNID = 2102)
+    # main('hst', SNID = 12781)
+
+    SN = ancillary.get_sn_names()
+    SN = np.array(SN, dtype=np.int)
+    flag = ['sdss']*len(SN)
+    map(main, flag, SN)
 
     ###########################################
     ## Testing if pixel value is correct for SN
