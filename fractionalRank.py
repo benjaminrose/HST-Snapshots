@@ -172,9 +172,9 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     sciDataFlattened = (mask*sciData).flatten()
     ranked = np.sort(sciDataFlattened[sciDataFlattened != 0])
 
-    return ranked
+    return ranked, mask
 
-def get_sn_value(position, hdu, sciData=None, key=''):
+def get_sn_value(position, hdu, sciData=None, key='', mask=None):
     """
     Returns the numerical value of the pixels for the SN
 
@@ -195,9 +195,16 @@ def get_sn_value(position, hdu, sciData=None, key=''):
         use the strings `'hst'` or `'sdss'` to designate what galaxy source you
         want to use to calcualte the fpr.
 
+    mask : np.array (boolian)
+        the reulst of `sep.mask_ellipse`. States if a pixel is inside an
+        ellipse (defined by the galaxy) or not.
+
     # Returns
     sn : float
-        The pixel value of the
+        The pixel value of the.
+    
+    inside : boolian
+        A flag stating if the SN is inside or outside the galaxy.
     """
     # get science data if needed
     if sciData is None:
@@ -239,6 +246,10 @@ def get_sn_value(position, hdu, sciData=None, key=''):
     print('pixels: ', SNPixels)
     # can't use `SNPixels.round()` becuase `w.all_world2pix` returns a list!
     SNPixels = np.round(SNPixels)        # now a veritcal np.array
+
+    # Test if SN is outide the galaxy
+    inside = mask[SNPixels[1], SNPixels[0]]
+
     # Get value of SN's pixel
     #take median of 3x3 box. 
     sn = np.array([])
@@ -250,7 +261,7 @@ def get_sn_value(position, hdu, sciData=None, key=''):
     sn = np.median(sn)
     #todo(do I want median or mean?)
 
-    return sn
+    return sn, inside
 
 
 def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
@@ -340,6 +351,13 @@ def main(key, SNID = 2635):
         filePath = 'data/HST - combined/SN{0}_combined.fits'
         hdu, scidata = ancillary.import_fits(filePath.format(SNID), extention=1)
     elif key == 'sdss':
+        # skip over sdss images I do not have
+        if SNID in [12928, 15171, 19023]:
+            np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
+            np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
+            np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
+            return None
+
         # get SN position
         print('getting SN position')
         position = get_SN_SDSS_coord(SNID)
@@ -357,16 +375,20 @@ def main(key, SNID = 2635):
 
     # get pixel values of galaxy and SN
     print('getting galaxy pixels values')
-    galaxy_pixels = get_galaxy_pixels(SNID, hdu, scidata, key=key)
+    galaxy_pixels, mask = get_galaxy_pixels(SNID, hdu, scidata, key=key)
     print(galaxy_pixels)
     print('getting SN pixel value')
     print('SN location to pixel is wrong')
-    sn_pixel_value = get_sn_value(position, hdu, scidata, key)
+    sn_pixel_value, inside = get_sn_value(position, hdu, scidata, key, mask)
     print(sn_pixel_value)
 
     # get Fractional Pixel Rank
     print('getting FPR')
-    fpr = get_FPR(galaxy_pixels, sn_pixel_value)
+    #test if SN is outside galaxy, or other error
+    if inside:
+        fpr = get_FPR(galaxy_pixels, sn_pixel_value)
+    else:
+        fpr = 0
     print(fpr)
 
     # save data
@@ -377,7 +399,7 @@ def main(key, SNID = 2635):
     np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calcuated with '+key)
 
 if __name__ == "__main__":
-    main('sdss')
+    main('hst', SNID = 2102)
 
     ###########################################
     ## Testing if pixel value is correct for SN
