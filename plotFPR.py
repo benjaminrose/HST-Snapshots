@@ -81,24 +81,47 @@ def main(flag, show=True):
     hst = collect_data('hst')
     hst = hst[1:]
     fpr_hst = np.array(hst[:,1], dtype=np.float)
+    fpr_hst.sort()
+    cdf_hst = np.array(range(fpr_hst.size))/(fpr_hst.size-1)
 
     sdss = collect_data('sdss')
     sdss = sdss[1:]
     fpr_sdss = np.array(sdss[:,1], dtype=np.float)
+    fpr_sdss.sort()
+    cdf_sdss = np.array(range(fpr_sdss.size))/(fpr_sdss.size-1)
+
+
+    print('hst: ', fpr_hst)
+    print('sdss: ', fpr_sdss)
 
     #plot images
-    plt.figure('histogram')
-    # sns.kdeplot(fpr_hst, cumulative=True) #shade=True
-    sns.distplot(fpr_hst, bins=10, rug=True)
-    plt.xlabel('Fractional Prixel Rank, of HST galaxies')
-    plt.ylabel('frequency')
-    plt.xlim(-0.5, 1.5)
 
-    plt.figure('cdf')
-    fpr_hst.sort()
-    cdf = np.array(range(fpr_hst.size))/(fpr_hst.size-1)
-    plt.plot(fpr_hst, cdf)
-    plt.xlabel('Fractional Prixel Rank, of HST galaxies')
+    # #plot histogram 
+    # plt.figure('histogram')
+    # # sns.kdeplot(fpr_hst, cumulative=True) #shade=True
+    # sns.distplot(fpr_hst, bins=10, rug=True)
+    # plt.xlabel('Fractional Prixel Rank, of HST galaxies')
+    # plt.ylabel('frequency-ish')    #but not really.
+    # plt.xlim(-0.5, 1.5)
+
+    # #plot sdss-cdf
+    # plt.figure('sdss-cdf')
+    # plt.plot(fpr_sdss, cdf_sdss)
+    # plt.xlabel('Fractional Prixel Rank, of HST galaxies')
+    # plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
+
+    # #plot hst-cdf
+    # plt.figure('hst-cdf')
+    # plt.plot(fpr_hst, cdf_hst)
+    # plt.xlabel('Fractional Prixel Rank, of HST galaxies')
+    # plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
+
+    #plot combined cdf
+    plt.figure('combined-cdf')
+    plt.plot(fpr_sdss, cdf_sdss, label='sdss')
+    plt.plot(fpr_hst, cdf_hst, label='hst')
+    plt.legend(loc=0)
+    plt.xlabel('Fractional Prixel Rank')
     plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
 
     # save results
