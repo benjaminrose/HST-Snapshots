@@ -144,7 +144,9 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     if key == 'hst':
         galaxyData = Table.read('resources/hosts_25.csv', format='ascii.commented_header', header_start=2)
     elif key == 'sdss':
-        galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.commented_header', header_start=2)
+        galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.commented_header', header_start=2)   
+        # no idea which is better between these two.
+        # galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.csv', header_start=2)
     else:
         raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
     # table headers are: SN ID, npix, x, y, a, b, theta
@@ -155,15 +157,15 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     galaxyData.add_index('SN')
     #todo(I might need to not read this in each time, but rather take it as a parmeter?)
     
-    hostParams = galaxyData.loc[2635]
+    hostParams = galaxyData.loc[SNID]
     #todo(2635 needs to be a parameter)
     hostParams = Table(hostParams)     #convert to a Table because Rows suck
 
     # set scalling factor for host parameters. Silly `SE` and `sep`!
     n = 3 
-    print(hostParams['x'].quantity[0], hostParams['y'].quantity,
-                 hostParams['a'].quantity, hostParams['b'].quantity, 
-                 hostParams['theta'].to(u.radian).value, n)
+    print(hostParams['x'].quantity[0], hostParams['y'].quantity[0],
+                 hostParams['a'].quantity[0], hostParams['b'].quantity[0], 
+                 hostParams['theta'].to(u.radian).value[0], n)
     mask_ellipse(mask, hostParams['x'].quantity[0], hostParams['y'].quantity[0]
                 , hostParams['a'].quantity[0], hostParams['b'].quantity[0] 
                 , hostParams['theta'].to(u.radian).value[0], n)
@@ -248,6 +250,7 @@ def get_sn_value(position, hdu, sciData=None, key='', mask=None):
     SNPixels = np.round(SNPixels)        # now a veritcal np.array
 
     # Test if SN is outide the galaxy
+    #todo(what if mask was not pasted in?)
     inside = mask[SNPixels[1], SNPixels[0]]
 
     # Get value of SN's pixel
@@ -389,6 +392,7 @@ def main(key, SNID = 2635):
     if inside:
         fpr = get_FPR(galaxy_pixels, sn_pixel_value)
     else:
+        print('SN{} is outside of galaxy'.format(SNID))
         fpr = 0
     print(fpr)
 
@@ -401,6 +405,10 @@ def main(key, SNID = 2635):
 
 if __name__ == "__main__":
     # main('hst', SNID = 12781)
+    
+    # SN = np.array([2102, 2635], dtype=np.int)
+    # flag = ['sdss']*len(SN)
+    # map(main, flag, SN)
 
     SN = ancillary.get_sn_names()
     SN = np.array(SN, dtype=np.int)
