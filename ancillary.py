@@ -1,15 +1,20 @@
-'''ancillary functions
-'''
+"""ancillary.py -- a storage file for arbitrary resued fuctions.
+
+    Benjamin Rose
+    benjamin.rose@me.com
+    Universtiy of Notre Dame
+    Python 2
+    2016-06-13    #when comments were added
+    Licesed under the MIT License
+"""
+import glob 					#for geting names from the file system.
+import re
 
 import numpy as np
-
 from astropy.io import fits		#to read fits files
 from astropy.coordinates import SkyCoord
 from astropy.table import Table
 from astropy import units as u
-
-import glob 					#for geting names from the file system.
-import re
 
 def import_fits(image, extention=0):
 	'''
@@ -38,14 +43,17 @@ def import_fits(image, extention=0):
 
 	hdu = fits.open(image)
 
-	data = hdu[extention].data #the location of science data in HST multi extention FITS images
+	data = hdu[extention].data
 	# I am unsure why this is needed, but it is!
+	#Astropy talks about bid and little indian stuff
 	data = data.byteswap(True).newbyteorder() 
 
 	return hdu, data
 
 def update_dataset():
 	'''
+	Not functioning yet.
+
 	Updates `resources/dataset.csv`. It first finds if there are any new SN in 
 	`data/HST - combined` then goes out and fills in `SDSS ID`, `RA`, `dec`. All other
 	entries need to be entered someother way (`delta RA`, `delta Dec`, & `SDSS DR12 obj ID` 
