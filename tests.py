@@ -23,7 +23,7 @@ from astropy.wcs import WCS
 import ancillary
 import fractionalRank
 
-def correct_galaxy(telescope, n=9):
+def correct_galaxy(telescope, n=3):
 	"""
 	This saves visual images to see if defGalaxy is working.
 
@@ -104,7 +104,7 @@ def correct_galaxy(telescope, n=9):
 		plt.colorbar()
 
 		# plot elipse
-		e = Ellipse(center, n*a, n*b, theta.to(u.deg).value)
+		e = Ellipse(center, 2*n*a, 2*n*b, theta.to(u.deg).value)
 		e.set_facecolor([1,.733333333,0])
 		e.set_alpha(0.25)
 		plt.gca().add_patch(e)
@@ -114,7 +114,7 @@ def correct_galaxy(telescope, n=9):
 		plt.ylim(y_plot[0], y_plot[1]) 
 
 		#save figure
-		folder = 'test_results/correct_galaxy/'+currentTime.strftime("%Y-%m-%d %H:%M:%S")
+		folder = 'test_results/correct_galaxy/'+currentTime.strftime("%Y-%m-%d %H:%M:%S")      #%H:%M:%S is becoming %H/%M/%S.
 		if not path.exists(folder): makedirs(folder)
 		plt.savefig(folder+'/'+telescope+'_SN'+str(sn)+'_scaled'+str(n)+'.pdf')
 
@@ -122,4 +122,4 @@ def correct_galaxy(telescope, n=9):
 		plt.close(str(sn))
 
 if __name__ == "__main__":
-	correct_galaxy('sdss')
+	correct_galaxy('hst')
