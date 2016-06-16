@@ -1,0 +1,70 @@
+# SN,SDSS,HST
+12781,,out of field
+12860,,
+12874,,out of field
+12928,,out of field
+12930,,out of field
+13038,out of field,out of field
+13135,?,out of field
+13354,deblending,wrong host
+13411,,
+13506,,outside
+13615,,
+13689,outside,out of field
+13894,,outside
+13896,,outside
+14113,deblending,
+14157,,
+1415,,
+14279,,
+14284,wrong host,
+14437,wrong host,
+14871,wrong host,
+14984,,outside
+15171,,out of field
+15222,,outside
+15229,,
+15345,,
+15461,,outside
+15587,,outside
+15850,out of field,out of field
+17208,,outside
+17371,,out of field
+17745,,
+17884,,out of field
+17886,,outside
+18030,,
+18241,,
+18323,,outside
+18415,out of field,outside
+18602,,outside
+18835,,
+19023,,out of field
+19048,,
+19174,,
+19282,out of field,out of field
+19323,,outside
+19616,,out of field
+20350,deblending,out of field
+20874,,
+2102,,
+2440,,out of field
+2561,,outside
+2635,,
+2992,,
+3488,,
+4019,,outside
+5103,,outside
+5550,,?
+6057,,
+6491,,"star, outside"
+6614,,
+8297,,out of field
+# outside,Correct host but SN is outside the defined host size,
+# out of field,SN is not in the “field of view” of the test,
+# star,there is a foreground star in the way,
+# ?,SN looks near the edge. Hard to tell by eye,
+# wrong host,The wrong host is selected. Correct host is visible,
+# de-blending issue,SDSS took two galaxies and thought they were one,
+# hst,hst has most of its issues with too small of galaxy definitions,
+# sdss,SDSS has a few wrong hosts (or out of the field wrong) but NO outside. AKA SDSS is deep!,
