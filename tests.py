@@ -83,7 +83,10 @@ def correct_galaxy(telescope, n=3):
 		# figure out region to plot
 		center = (x, y)
 		r = np.ceil(max(n*a, n*b))
-		r += 10     #add a bit of a padding
+		if telescope == 'hst':
+			r += 200     #add a bit of a padding
+		else:
+			r += 25
 		x_plot = (center[0]-r, center[0]+r)    #x-range to plot over
 		y_plot = (center[1]-r, center[1]+r)
 
@@ -122,4 +125,4 @@ def correct_galaxy(telescope, n=3):
 		plt.close(str(sn))
 
 if __name__ == "__main__":
-	correct_galaxy('sdss')
+	correct_galaxy('hst', n=5)
