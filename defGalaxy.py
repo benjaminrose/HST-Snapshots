@@ -235,7 +235,7 @@ def main_hst(SNNumber = 2635):
     data = smooth_Image(data, stDev)
 
     # find threshold
-    surfaceBrightness = 25    #mag/sqr-arcsec
+    surfaceBrightness = 26    #mag/sqr-arcsec
     #the magniutde per pixel for the same SB, wikipedia for equation
     magPerPixel = surfaceBrightness - 2.5*np.log10(0.04**2)
     #convert to AB-mag to flux
@@ -306,7 +306,7 @@ if __name__ == "__main__":
     # map(main, names)
 
     # main_sdss()
-    map(main_sdss, names)
+    map(main_hst, names)
 
     '''
     ## Get SN number

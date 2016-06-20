@@ -23,7 +23,7 @@ from astropy.wcs import WCS
 import ancillary
 import fractionalRank
 
-def correct_galaxy(telescope, n=3):
+def correct_galaxy(telescope, cutoff,  n=3):
 	"""
 	This saves visual images to see if defGalaxy is working.
 
@@ -40,9 +40,9 @@ def correct_galaxy(telescope, n=3):
 	# Get galaxy information -- from csv file
 	#todo(make this a simple system then the 5 or more if-else statements)
 	if telescope == 'hst':
-		galaxies = Table.read('resources/hosts_25.csv', format='ascii.csv', header_start=2)
+		galaxies = Table.read('resources/hst_hosts_{}.csv'.format(cutoff), format='ascii.csv', header_start=2)
 	elif telescope == 'sdss':
-		galaxies = Table.read('resources/sdss_hosts_2.csv', format='ascii.csv', header_start=2)
+		galaxies = Table.read('resources/sdss_hosts_{}.csv'.format(cutoff), format='ascii.csv', header_start=2)
 	else:
 		raise ValueError('{} is unacceptable, use "hst" or "sdss" to represent the correct galaxy definition you want to test.'.format(telescope))
 	#todo(make the table work better, it is getting the first column name as '# SN' rather then 'SN')
@@ -119,10 +119,10 @@ def correct_galaxy(telescope, n=3):
 		#save figure
 		folder = 'test_results/correct_galaxy/'+currentTime.strftime("%Y-%m-%d %H:%M:%S")      #%H:%M:%S is becoming %H/%M/%S.
 		if not path.exists(folder): makedirs(folder)
-		plt.savefig(folder+'/'+telescope+'_SN'+str(sn)+'_scaled'+str(n)+'.pdf')
+		plt.savefig(folder+'/'+telescope+'_SN'+str(sn)+'_cutoff'+str(cutoff)+'_scaled'+str(n)+'.pdf')
 
 		#close to same memory
 		plt.close(str(sn))
 
 if __name__ == "__main__":
-	correct_galaxy('hst', n=3)
+	correct_galaxy('hst', 26, n=3)
