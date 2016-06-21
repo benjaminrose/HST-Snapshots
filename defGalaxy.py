@@ -12,6 +12,7 @@ from __future__ import print_function, division
 from sys import exit
 from datetime import datetime
 from os import path, makedirs
+import warnings
 
 import numpy as np
 import sep
@@ -103,12 +104,13 @@ def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
             centerIDs.append(i)
     #todo(add error for nothing found)
     if len(centerIDs) == 0:
-            searchRadius = 500
-            centerIDs = []    #just play it safe
+        warnings.warn("This SN can't be found in initial search")
+        searchRadius = 500
+        centerIDs = []    #just play it safe
 
-            for i, x in enumerate(sources['x']):
-                if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
-                    centerIDs.append(i)
+        for i, x in enumerate(sources['x']):
+            if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
+                centerIDs.append(i)
     
      # Select largest of the center objects, but save the ID
     #this selects the centerID associated with the max (in size) of the central cources
@@ -214,7 +216,7 @@ def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
     with open(hostLocation, 'a') as f:
         f.write(dataToSave)
 
-def main_hst(SNNumber = 2635):
+def main_hst(SNNumber = 2635, surfaceBrightness = 25):
     """
     This is the default method of defining an hst galaxy
 
@@ -222,6 +224,9 @@ def main_hst(SNNumber = 2635):
     SNNumber : int
         The sdss identification number of the object you want to find the host 
         for.
+
+    surfaceBrightness : int, float
+        the disired cut off in mag/sqr-arcsec
     """
     print("running SN{}".format(SNNumber))
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
@@ -235,7 +240,6 @@ def main_hst(SNNumber = 2635):
     data = smooth_Image(data, stDev)
 
     # find threshold
-    surfaceBrightness = 26    #mag/sqr-arcsec
     #the magniutde per pixel for the same SB, wikipedia for equation
     magPerPixel = surfaceBrightness - 2.5*np.log10(0.04**2)
     #convert to AB-mag to flux
@@ -252,8 +256,37 @@ def main_hst(SNNumber = 2635):
     sources = run_sep(data, fluxThresh.value)
     # print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
-    #get "best" object from sep
-    host = find_host(sources)
+    #get "best" object from sep - 
+    #or select from hardcoded objects that do not work in the test.
+    hardcoded = [8297, 13354, 13411, 14113, 14284, 18415]
+    if SNNumber in hardcoded:
+        # if SN is hardcoded do the search, but with a very small radius and a guess that is what is determined between the R_25 and R_26 runs that were visually inspected.
+        warnings.warn("SN{}'s host is searched via a hard-coded method".format(SNNumber))
+        radius = 20     #pixels
+        if SNNumber == 8297:
+            # Does not work for R_25, and R_26 is just fine.
+            # SNPixels = (1111, 1025)
+            # host = find_host(sources, SNPixels, radius)
+            host = find_host(sources)
+        elif SNNumber == 13354:
+            SNPixels = (978, 1043)
+            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 13411:
+            SNPixels = (1010, 1067)
+            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 14113:
+            SNPixels = (1041, 1049)
+            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 14284:
+            SNPixels = (1063, 1056)
+            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 18415:
+            SNPixels = (1095, 1066)
+            host = find_host(sources, SNPixels, radius)
+        else:
+            raise NotImplementedError('Somehow SN{} is designated for HST hardcoding but is not implemented'.format(SNNumber))
+    else:
+        host = find_host(sources)
     # print('host: ', host)
 
     #save resutls to file
@@ -292,8 +325,17 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     np.savetxt('temp-sn2635-sdss-sources.csv', sources, delimiter=',', header='temp sn2635 sdss sources')
     print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
-    #get "best" object from sep
-    host = find_sdss_host(sources, SNNumber, hdu)
+    #get "best" object from sep - 
+    #or select from hardcoded objects that do not work in the test.
+    hardcoded = [0]
+    if SNNumber in hardcoded:
+        # hardcoed in the initial guess and search radius, the sdss method did not work on these.
+        if SNNumber == 0:
+            host = find_host(sources, SNPixels, radius)
+        else:
+            raise NotImplementedError('Somehow SN{} is designated for SDSS hardcoding but is not implemented'.format(SNNumber))
+    else:
+        host = find_sdss_host(sources, SNNumber, hdu)
     print('host: ', host)
 
     #save resutls to file
@@ -301,12 +343,15 @@ def main_sdss(SNNumber = 2635, fltr='g'):
 
 
 if __name__ == "__main__":
+    # main_hst(18415, 25)
+    map(main_hst, [13354, 13354], [25, 26])
+
     # get integers of the SN numbers/names
-    names = np.array(ancillary.get_sn_names(), dtype=int)
+    # names = np.array(ancillary.get_sn_names(), dtype=int)
     # map(main, names)
 
     # main_sdss()
-    map(main_hst, names)
+    # map(main_hst, names)
 
     '''
     ## Get SN number
