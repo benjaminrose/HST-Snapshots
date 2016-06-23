@@ -3,7 +3,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 2
+    Python 3
     2016-03-07
     Licesed under the MIT License
 """
