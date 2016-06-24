@@ -82,15 +82,15 @@ def update_dataset():
 	#todo(unit support?)
 
 	#test if new things
-	print data['SDSS ID'][0], names
+	print(data['SDSS ID'][0], names)
 
 	for i in data['SDSS ID']:
-		print i == any(names)
+		print(i == any(names))
 		for j in names:
 			if str(i) == str(j):
-				print 'match'
+				print('match')
 				break
-			print 'no match'
+			print('no match')
 
 		#get RA & Dec
 
@@ -147,8 +147,8 @@ def getSDSSPosition(SN):
 		split = np.array( re.split(r'\s+', first_line) )
 		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
 		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
-		# print ra_val_where, dec_val_where
-		# print float(split[ra_val_where])*u.deg, type(float(split[ra_val_where]))
+		# print(ra_val_where, dec_val_where)
+		# print(float(split[ra_val_where])*u.deg, type(float(split[ra_val_where])))
 		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
 
 	return SN_position
