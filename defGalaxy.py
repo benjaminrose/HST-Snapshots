@@ -258,9 +258,9 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
 
     #get "best" object from sep - 
     #or select from hardcoded objects that do not work in the test.
-    hardcodeFIndHost = [8297, 13038, 13354, 13411, 14113, 14284, 18415, 19282]
+    hardcodeFindHost = [8297, 13038, 13354, 13411, 14113, 14284, 18415, 19282]
     #todo(why am i repeateing the obove line and then swiching through everything below?)
-    if SNNumber in hardcodeFIndHost:
+    if SNNumber in hardcodeFindHost:
         # if SN is hardcoded do the search, but with a very small radius and a guess that is what is determined between the R_25 and R_26 runs that were visually inspected.
         warnings.warn("SN{}'s host is searched via a hard-coded method".format(SNNumber))
         radius = 20     #pixels
