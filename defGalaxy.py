@@ -4,7 +4,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 2
+    Python 3
     2016-03-03
     Licesed under the MIT License
 """
@@ -46,7 +46,7 @@ def smooth_Image(sciData, stDev):
     smoothedData = convolve(sciData, gauss) 
     return smoothedData
 
-def run_sep(sciData, threshold, minarea=50):
+def run_sep(sciData, threshold, minarea=50, deblendCont=0.1):
     """
     this takes an image and smooths it
 
@@ -66,7 +66,7 @@ def run_sep(sciData, threshold, minarea=50):
     bkg = sep.Background(sciData)
     bkg.subfrom(sciData)
 
-    sources = sep.extract(sciData, threshold, minarea=minarea, deblend_cont=0.1)
+    sources = sep.extract(sciData, threshold, minarea=minarea, deblend_cont=deblendCont)
     return sources
 
 def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
@@ -216,7 +216,7 @@ def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
     with open(hostLocation, 'a') as f:
         f.write(dataToSave)
 
-def main_hst(SNNumber = 2635, surfaceBrightness = 25):
+def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.1):
     """
     This is the default method of defining an hst galaxy
 
@@ -253,13 +253,14 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 25):
     fluxThresh = fluxAB * 10**(magPerPixel/-2.5)
 
     #run sep
-    sources = run_sep(data, fluxThresh.value)
+    sources = run_sep(data, fluxThresh.value, minArea, deblendCont)
     # print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
     #get "best" object from sep - 
     #or select from hardcoded objects that do not work in the test.
-    hardcoded = [8297, 13354, 13411, 14113, 14284, 18415]
-    if SNNumber in hardcoded:
+    hardcodeFIndHost = [8297, 13038, 13354, 13411, 14113, 14284, 18415, 19282]
+    #todo(why am i repeateing the obove line and then swiching through everything below?)
+    if SNNumber in hardcodeFIndHost:
         # if SN is hardcoded do the search, but with a very small radius and a guess that is what is determined between the R_25 and R_26 runs that were visually inspected.
         warnings.warn("SN{}'s host is searched via a hard-coded method".format(SNNumber))
         radius = 20     #pixels
@@ -283,11 +284,17 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 25):
         elif SNNumber == 18415:
             SNPixels = (1095, 1066)
             host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 19282:
+            SNPixels = (1040, 1059)
+            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 13038:
+            SNPixels = (1059, 1033)
+            host = find_host(sources, SNPixels, radius)
         else:
             raise NotImplementedError('Somehow SN{} is designated for HST hardcoding but is not implemented'.format(SNNumber))
     else:
         host = find_host(sources)
-    # print('host: ', host)
+    print('host: ', host)
 
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, surfaceBrightness)
@@ -341,10 +348,37 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, sigma, 'sdss')
 
+def runSEPIndiviually():
+    # LSB galaxy, Nothing is found with these settings!
+    # SN19023 = {
+    #     'number' : 19023,
+    #     'sb' : 26.5,
+    #     'minArea' : 5, 
+    #     'deblendCont' : 0.1
+    # }
+
+    # LSB galaxy, Nothing is found with these settings!
+    # SN15850 = {
+    #     'number' : 15850,
+    #     'sb' : 26.5,
+    #     'minArea' : 5, 
+    #     'deblendCont' : 0.1
+    # }
+
+    # LSB galaxy, Found with these settings!
+    SN13038 = {
+        'number' : 13038,
+        'sb' : 26.5,
+        'minArea' : 50, 
+        'deblendCont' : 0.1
+    }
+
+    main_hst(SN13038['number'], SN13038['sb'], minArea=SN13038['minArea'], deblendCont=SN13038['deblendCont'])
 
 if __name__ == "__main__":
-    # main_hst(18415, 25)
-    map(main_hst, [13354, 13354], [25, 26])
+    # runSEPIndiviually()
+    main_hst(13038)
+    # map(main_hst, [13354, 13354], [25, 26])
 
     # get integers of the SN numbers/names
     # names = np.array(ancillary.get_sn_names(), dtype=int)

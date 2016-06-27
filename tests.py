@@ -3,7 +3,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 2
+    Python 3
     2016-03-03
     Licesed under the MIT License
 '''
@@ -125,4 +125,4 @@ def correct_galaxy(telescope, cutoff,  n=3):
 		plt.close(str(sn))
 
 if __name__ == "__main__":
-	correct_galaxy('hst', 25, n=3)
+	correct_galaxy('hst', 26, n=3)

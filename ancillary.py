@@ -3,7 +3,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 2
+    Python 3
     2016-06-13    #when comments were added
     Licesed under the MIT License
 """
@@ -65,7 +65,7 @@ def update_dataset():
 	data_location = 'data/HST - combined/'
 	try:
 		files = glob.glob(data_location + '*')
-	except Exception, e:
+	except Exception as e:
 		import warnings
 		warnings.warn('file import from `{0}` failed with warning: {1}'.format(data_location, e))
 
@@ -76,21 +76,21 @@ def update_dataset():
 	#import csv
 	try:
 		data = Table.read('resources/dataset.csv', format='ascii.commented_header')
-	except Exception, e:
+	except Exception as e:
 		import warnings
 		warnings.warn('importing `resources/dataset.csv` failed with warning: {0}'.format(e))
 	#todo(unit support?)
 
 	#test if new things
-	print data['SDSS ID'][0], names
+	print(data['SDSS ID'][0], names)
 
 	for i in data['SDSS ID']:
-		print i == any(names)
+		print(i == any(names))
 		for j in names:
 			if str(i) == str(j):
-				print 'match'
+				print('match')
 				break
-			print 'no match'
+			print('no match')
 
 		#get RA & Dec
 
@@ -147,8 +147,8 @@ def getSDSSPosition(SN):
 		split = np.array( re.split(r'\s+', first_line) )
 		ra_val_where = np.where(np.array(split) == 'RA:')[0][0]+1
 		dec_val_where = np.where(np.array(split) == 'DEC:')[0][0]+1
-		# print ra_val_where, dec_val_where
-		# print float(split[ra_val_where])*u.deg, type(float(split[ra_val_where]))
+		# print(ra_val_where, dec_val_where)
+		# print(float(split[ra_val_where])*u.deg, type(float(split[ra_val_where])))
 		SN_position[i] = SkyCoord(ra = float(split[ra_val_where])*u.deg, dec = float(split[dec_val_where])*u.deg)
 
 	return SN_position
