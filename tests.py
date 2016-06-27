@@ -125,4 +125,4 @@ def correct_galaxy(telescope, cutoff,  n=3):
 		plt.close(str(sn))
 
 if __name__ == "__main__":
-	correct_galaxy('hst', 25, n=3)
+	correct_galaxy('hst', 26, n=3)
