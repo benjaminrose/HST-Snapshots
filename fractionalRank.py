@@ -9,6 +9,7 @@
 """
 from __future__ import print_function, division
 import re #for regular expressions!
+import warnings
 
 import numpy as np
 from scipy import interpolate
@@ -79,7 +80,6 @@ def get_SN_HST_coord(SNID):
 
     #skip 13038 because I don't have a shift
     if SNID == 13038:
-        import warnings
         warnings.warn('SN13038 does not have a shift')
         SNPosition = SDSS_SNPosition
     else:
@@ -107,8 +107,9 @@ def get_SN_HST_coord(SNID):
 def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     """
     Returns the numerical value of the pixels for the host galaxy of `SNID`.
-    Uses the 25 mag/sqr-arcsec limit for a `key` of `hst` and `2-sigma` for a
+    Uses the 26 mag/sqr-arcsec limit for a `key` of `hst` and `2-sigma` for a
     `key` of `sdss`.
+    #todo(change to a variable sb cut off)
 
     # Parameters
     SNID : int
@@ -142,7 +143,7 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
     # get galaxy definition & format its astorpy.table object
     # galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)    #hardcoded for testing
     if key == 'hst':
-        galaxyData = Table.read('resources/hosts_25.csv', format='ascii.commented_header', header_start=2)
+        galaxyData = Table.read('resources/hst_hosts_26.csv', format='ascii.commented_header', header_start=2)
     elif key == 'sdss':
         galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.commented_header', header_start=2)   
         # no idea which is better between these two.
@@ -324,6 +325,12 @@ def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
             fpr = f(SN)
     return fpr
 
+def saveNaN(SNID, key, header):
+    save_location = 'resources/SN{0}/'.format(SNID)
+    np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
+    np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
+    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
+
 def main(key, SNID = 2635):
     """
     This is the default method for calculucating fractional pixel rank for a
@@ -344,6 +351,13 @@ def main(key, SNID = 2635):
     `SN*_{key}_fpr.csv`. Currently it cannot make the folders, `SN*`. This
     needs to be updated.
     """
+    #skip over two objects with obstructions
+    if SNID in [6491, 15345]:
+        header = 'SN{0} has an object obstructing its host galaxy'.format(SNID)
+        # display warning that there is an issue. 
+        warnings.warn(header)
+        saveNaN(SNID, key, header)
+        return None
     if key == 'hst':
         # get SN position
         print('getting SN{} position'.format(SNID))
@@ -356,10 +370,8 @@ def main(key, SNID = 2635):
     elif key == 'sdss':
         # skip over sdss images I do not have
         if SNID in [12928, 15171, 19023]:
-            save_location = 'resources/SN{0}/'.format(SNID)
-            np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
-            np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
-            np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [0], delimiter=',', header="SN{0} does not have an sdss coadd image.".format(SNID))
+            header = "SN{0} does not have an sdss coadd image.".format(SNID)
+            saveNaN(SNID, key, header)
             return None
 
         # get SN position
@@ -412,7 +424,7 @@ if __name__ == "__main__":
 
     SN = ancillary.get_sn_names()
     SN = np.array(SN, dtype=np.int)
-    flag = ['hst']*len(SN)
+    flag = ['sdss']*len(SN)
     map(main, flag, SN)
 
     ###########################################
