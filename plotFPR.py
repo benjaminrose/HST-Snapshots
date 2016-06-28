@@ -58,7 +58,7 @@ def collect_data(flag):
     """
     location = glob('resources/SN*/SN*_'+flag+'_fpr.csv')
 
-    # creating a header makes more sense then `if len(fprs)==0:`.
+    # creating a header makes more sense then `if len(fprs)==0:` in the for-loop.
     fprs = np.array([['#sn', 'fpr']])
     for i in location:
         name = i[12:17]
