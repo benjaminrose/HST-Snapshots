@@ -334,10 +334,23 @@ def main_sdss(SNNumber = 2635, fltr='g'):
 
     #get "best" object from sep - 
     #or select from hardcoded objects that do not work in the test.
-    hardcoded = [0]
+    hardcoded = [14284, 14437, 19282]
     if SNNumber in hardcoded:
+        radius = 10    # the normal sdss search is 25 pixel search
         # hardcoed in the initial guess and search radius, the sdss method did not work on these.
-        if SNNumber == 0:
+        if SNNumber == 14284:
+            SNPixels = (328, 612)
+            #We can run just to find_host() because find_sdss_host() just searches for SNPixels and uses a larger radius.
+            #todo(maybe all of these can be cut if the radius in find_sdss_host was smaller?)
+            host = find_host(sources, SNPixels, radius)
+        if SNNumber == 14437:
+            SNPixels = (637, 454)
+            host = find_host(sources, SNPixels, radius)
+        # if SNNumber == 18415:
+        #     SNPixels = (159, 526)
+        #     host = find_host(sources, SNPixels, radius)
+        if SNNumber == 19282:
+            SNPixels = (1193, 849)
             host = find_host(sources, SNPixels, radius)
         else:
             raise NotImplementedError('Somehow SN{} is designated for SDSS hardcoding but is not implemented'.format(SNNumber))
@@ -377,14 +390,14 @@ def runSEPIndiviually():
 
 if __name__ == "__main__":
     # runSEPIndiviually()
-    main_hst(13038)
+    # main_hst(13038)
     # map(main_hst, [13354, 13354], [25, 26])
 
     # get integers of the SN numbers/names
     # names = np.array(ancillary.get_sn_names(), dtype=int)
     # map(main, names)
 
-    # main_sdss()
+    main_sdss(19282)
     # map(main_hst, names)
 
     '''
