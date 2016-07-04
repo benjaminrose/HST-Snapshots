@@ -28,10 +28,11 @@ import fractionalRank
 
 def smooth_Image(sciData, stDev):
     """
-    this takes an image and smooths it
+    this takes an image and smooths it via `astropy.convolution`.
 
     # Parameters
     sciData : np.ndarray
+        sci data from an hdu or other image, as a 2D numpy array.
 
     stDev : int
         The standard deviation used as a parameter in 
@@ -39,7 +40,8 @@ def smooth_Image(sciData, stDev):
 
 
     # Returens
-    smoothedData : 
+    smoothedData : np.ndarry
+        the reuslt of `astropy.convolution.convolve`
 
     """
     gauss = Gaussian2DKernel(stDev)
@@ -51,13 +53,17 @@ def run_sep(sciData, threshold, minarea=50, deblendCont=0.1):
     this takes an image and smooths it
 
     # Parameters
-    sciData : 
+    sciData : np.ndarray
+        sci data from an hdu or other image, as a 2D numpy array.
 
     threshold : float
         Pixel value used for galaxy edge definion. 
 
     minarea : int
-        The minimum area of the source. Passed directly to sep.
+        The minimum area of the source. Passed directly to `sep`.
+
+    deblendCont : float
+        One of the deblending parrameters. Passed directly to `sep`'s `deblend_cont`.
 
     # Returens
     sources : np.ndarray
@@ -71,10 +77,7 @@ def run_sep(sciData, threshold, minarea=50, deblendCont=0.1):
 
 def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
     """
-    a search to find the host galaxy from a list of possible sources
-
-    # Issues
-        This is failing with 2635, it is getting an object at (1108.1448309503585, 37.95088945611436) instead of at (1027.0670854882237, 1049.7834967223419)
+    A search to find the host galaxy from a list of possible sources. It retuns the largest source (from `source`) found within the pixel `searchRadius` of the `initialGuess`.
 
     # Paramenters
     sources : np.ndarray
@@ -86,6 +89,9 @@ def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
         The likely pixel location of the host. Needs to be of length 2. This 
         defaults to the center of an HST image but the SN's location can be 
         used instead.
+
+    searchRadius : int
+        The number of pixels from the `initialGUess` to search.
 
     # Returns
     host : np.void
@@ -227,6 +233,12 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
 
     surfaceBrightness : int, float
         the disired cut off in mag/sqr-arcsec
+
+    minarea : int
+        The minimum area of the source. Passed directly to `sep`.
+
+    deblendCont : float
+        One of the deblending parrameters. Passed directly to `sep`'s `deblend_cont`.
     """
     print("running SN{}".format(SNNumber))
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
@@ -362,6 +374,11 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     saveGalaxies(sources, host, SNNumber, sigma, 'sdss')
 
 def runSEPIndiviually():
+    """     
+    Run a few SN (through `main_hst`) with specific settings. These need
+    to be saved, but this concept does not work well. You need to make sure 
+    that these SN are saved properly. Currently they are just appened.
+    """
     # LSB galaxy, Nothing is found with these settings!
     # SN19023 = {
     #     'number' : 19023,
@@ -399,55 +416,3 @@ if __name__ == "__main__":
 
     main_sdss(19282)
     # map(main_hst, names)
-
-    '''
-    ## Get SN number
-    SNNumber = 2635
-    ### get SDSS and HST image file names
-    sdssFile = 'data/SDSS - coadded/SN{}-g.fits'.format(SNNumber)
-    #todo(this should propbably be combined rather then just g or r)
-    hstFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
-    ### Do I need the location of the SN to figure out SDSS oject?
-
-
-    ## Import science data
-    #`ancillary.import_fits() returns (hdu, scidata)
-    sdssData = ancillary.import_fits(sdssFile, extention=0)[1]
-    hstData = ancillary.import_fits(hstFile, extention=1)[1]
-
-
-    ## run sep on SDSS
-    ### does this need any treatment?
-    sdssSources = run_sep(sdssData, 0.006)
-
-
-    ## select the most likely hosts
-
-
-    ## save out full (OR just most likey?) sep results from SDSS
-    saveAS = 'SN{}_sdss_sources_thresh0.0065_cont0.1.csv'.format(SNNumber)
-    np.savetxt(saveAs, sources, delimiter=',')
-
-
-    ## run sep on HST
-    ### still smoothing?
-    stDev = 3
-    hstData = smooth_Image(hstData, stDev)
-    hstSources = run_sep(hstData, 0.006)
-
-
-    ## select the most likely hosts
-
-
-    ## save out full (OR just most likey?) sep results from HST
-    saveAS = 'SN{}_hst)_sources_thresh0.0065_cont0.1.csv'.format(SNNumber)
-    np.savetxt(saveAs, sources, delimiter=',')
-
-
-    ## Combine and get final galaxy
-    ### center from HST
-    ### a, b from SDSS
-    ### theta from SDSS rotated to HST's wcs
-    #### Check to see if `wcs.crval` is corect. It seems that for SN2635 they were too close together.
-    '''
-
