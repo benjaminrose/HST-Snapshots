@@ -241,4 +241,5 @@ def inspectSNOutsideGalaxy(telescope, n=3, cutoff=26):
 
 if __name__ == "__main__":
     # correct_galaxy('hst', 26, n=3)
-    inspectSNOutsideGalaxy('sdss', cutoff = 2)
+    correct_galaxy('sdss', 2, n=3)
+    # inspectSNOutsideGalaxy('sdss', cutoff = 2)
