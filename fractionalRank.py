@@ -413,7 +413,7 @@ def main(key, SNID = 2635):
     #todo(make it so a new folder can be made if need be.)
     np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), galaxy_pixels, delimiter=',', header="The pixel values of SN{0} host galaxy from {1}. The galaxy's edge is defined hard coded currently".format(SNID, key))
     np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID)+' as seen by '+key)
-    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calcuated with '+key)
+    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calculated with '+key)
 
 if __name__ == "__main__":
     # main('hst', SNID = 12781)
