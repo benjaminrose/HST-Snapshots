@@ -111,7 +111,7 @@ def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
     #todo(add error for nothing found)
     if len(centerIDs) == 0:
         warnings.warn("This SN can't be found in initial search")
-        searchRadius = 500
+        searchRadius *= 2.5
         centerIDs = []    #just play it safe
 
         for i, x in enumerate(sources['x']):
@@ -358,9 +358,9 @@ def main_sdss(SNNumber = 2635, fltr='g'):
         if SNNumber == 14437:
             SNPixels = (637, 454)
             host = find_host(sources, SNPixels, radius)
-        # if SNNumber == 18415:
-        #     SNPixels = (159, 526)
-        #     host = find_host(sources, SNPixels, radius)
+        if SNNumber == 18415:
+            SNPixels = (159, 526)
+            host = find_host(sources, SNPixels, radius)
         if SNNumber == 19282:
             SNPixels = (1193, 849)
             host = find_host(sources, SNPixels, radius)
@@ -414,5 +414,5 @@ if __name__ == "__main__":
     # names = np.array(ancillary.get_sn_names(), dtype=int)
     # map(main, names)
 
-    main_sdss(19282)
+    main_sdss(18415)
     # map(main_hst, names)
