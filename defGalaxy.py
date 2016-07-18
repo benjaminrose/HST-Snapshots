@@ -357,26 +357,32 @@ def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
 
     #get "best" object from sep - 
     #or select from hardcoded objects that do not work in the test.
-    hardcoded = [14284, 14437, 19282]
+    hardcoded = [13354, 14113, 14284, 14437, 19282, 20350]
     if SNNumber in hardcoded:
         radius = 10    # the normal sdss search is 25 pixel search
         # hardcoed in the initial guess and search radius, the sdss method did not work on these.
-        if SNNumber == 14284:
-            SNPixels = (328, 612)
+        if SNNumber == 13354:
             #We can run just to find_host() because find_sdss_host() just searches for SNPixels and uses a larger radius.
             #todo(maybe all of these can be cut if the radius in find_sdss_host was smaller?)
-            host = find_host(sources, SNPixels, radius)
+            # SNPixels = (1539, 1283)    #SN's position is not helpful
+            SNPixels = (1544, 1284)      #need to shift towards galaxy
+            radius = 8
+        elif SNNumber == 14113:
+            SNPixels = (259, 1115)
+        elif SNNumber == 14284:
+            SNPixels = (328, 612)
         elif SNNumber == 14437:
             SNPixels = (637, 454)
-            host = find_host(sources, SNPixels, radius)
         elif SNNumber == 18415:
             SNPixels = (159, 526)
-            host = find_host(sources, SNPixels, radius)
         elif SNNumber == 19282:
             SNPixels = (1193, 849)
-            host = find_host(sources, SNPixels, radius)
+        elif SNNumber == 20350:
+            SNPixels = (917, 796)
+            radius = 15    #if I let it auto exapnd, it picks the neighbor.
         else:
             raise NotImplementedError('Somehow SN{} is designated for SDSS hardcoding but is not implemented'.format(SNNumber))
+        host = find_host(sources, SNPixels, radius)
     else:
         host = find_sdss_host(sources, SNNumber, hdu)
     print('host: ', host)
@@ -428,6 +434,7 @@ if __name__ == "__main__":
 
     # get integers of the SN numbers/names
     names = np.array(ancillary.get_sn_names(), dtype=int)
+    names = np.array([13354], dtype=int)
     # map(main, names)
 
     # main_sdss(14284)

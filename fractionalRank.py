@@ -424,8 +424,8 @@ if __name__ == "__main__":
 
     SN = ancillary.get_sn_names()
     SN = np.array(SN, dtype=np.int)
-    flag = ['hst']*len(SN)
-    # flag = ['sdss']*len(SN)
+    # flag = ['hst']*len(SN)
+    flag = ['sdss']*len(SN)
     map(main, flag, SN)
 
     ###########################################
