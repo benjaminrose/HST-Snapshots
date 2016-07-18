@@ -1,5 +1,5 @@
 # data from sep with a SB cutoff of 25 mag/sqr-arcsec,,,,,,
-# note that a, b need to be scaled by 6 to get the correct elliptical parameters (silly Source Extractor!),,,,,
+# note that a, b need to be scaled by 3 to get the correct elliptical radii (silly Source Extractor!),,,,,
 # SN, npix, x, y, a, b, theta
 12781,17915,1068.17520801,1000.71766296,28.5603027344,18.9608039856,-0.4787743986
 12860,11081,1038.98152087,1162.60458116,39.4786567688,14.0713310242,-0.8930464983

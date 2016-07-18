@@ -100,25 +100,29 @@ def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
         `['npix', 'x', 'y', 'a', 'b', 'theta']`
     """
     #todo(this fails. It is not selecting the right thing at all.)
-    # Where, in array, are the objects close to initialGuess
+    # Where, in array `soucres`, are the objects close to initialGuess?
 
-    #todo(change so it searches to 200 always but does a while loop till it finds something.)
+    #make a holding varriable
     centerIDs = []
-
+    #loop through `sources` and save if its center is inside search area
     for i, x in enumerate(sources['x']):
         if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
             centerIDs.append(i)
-    #todo(add error for nothing found)
+    
+    #check to see if something is found, or else `np.argmax` fails badly
     if len(centerIDs) == 0:
         warnings.warn("This SN can't be found in initial search")
-        searchRadius *= 2.5
         centerIDs = []    #just play it safe
 
-        for i, x in enumerate(sources['x']):
-            if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
-                centerIDs.append(i)
+        #increase search area till you find somthing. 
+        while len(centerIDs) == 0: 
+            #increase from 200 -> 500 for hst or propotinally
+            searchRadius *= 2.5
+            for i, x in enumerate(sources['x']):
+                if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
+                    centerIDs.append(i)
     
-     # Select largest of the center objects, but save the ID
+    # Select largest of the center objects, but save the ID
     #this selects the centerID associated with the max (in size) of the central cources
     idx = centerIDs[np.argmax(sources['npix'][centerIDs])]
     #todo(add error for too many found)
@@ -311,7 +315,7 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, surfaceBrightness)
 
-def main_sdss(SNNumber = 2635, fltr='g'):
+def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
     """
     This is the default method of defining an sdss galaxy
 
@@ -323,6 +327,13 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     fltr : string, char
         The single character of an SDSS filter: u, g, r, i, or z (sill python 
         with `filter` being a built in function!)
+
+    minarea : int
+        The minimum area of the source. Passed directly to `sep`. The default 
+        is the same as `sep`.
+
+    deblendCont : float
+        One of the deblending parrameters. Passed directly to `sep`'s `deblend_cont`. The default is the same as `sep`.
     """
     #break out if I don't have these sdss files
     if SNNumber in [12928, 15171, 19023]:
@@ -340,7 +351,7 @@ def main_sdss(SNNumber = 2635, fltr='g'):
     bkg = sep.Background(data)
     thresh = sigma*bkg.globalrms
     #run sep
-    sources = run_sep(data, thresh, 10)
+    sources = run_sep(data, thresh, minarea, deblendCont)
     np.savetxt('temp-sn2635-sdss-sources.csv', sources, delimiter=',', header='temp sn2635 sdss sources')
     print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
@@ -355,13 +366,13 @@ def main_sdss(SNNumber = 2635, fltr='g'):
             #We can run just to find_host() because find_sdss_host() just searches for SNPixels and uses a larger radius.
             #todo(maybe all of these can be cut if the radius in find_sdss_host was smaller?)
             host = find_host(sources, SNPixels, radius)
-        if SNNumber == 14437:
+        elif SNNumber == 14437:
             SNPixels = (637, 454)
             host = find_host(sources, SNPixels, radius)
-        if SNNumber == 18415:
+        elif SNNumber == 18415:
             SNPixels = (159, 526)
             host = find_host(sources, SNPixels, radius)
-        if SNNumber == 19282:
+        elif SNNumber == 19282:
             SNPixels = (1193, 849)
             host = find_host(sources, SNPixels, radius)
         else:
@@ -378,6 +389,11 @@ def runSEPIndiviually():
     Run a few SN (through `main_hst`) with specific settings. These need
     to be saved, but this concept does not work well. You need to make sure 
     that these SN are saved properly. Currently they are just appened.
+
+    This should be a data oject in the main-scope and `main_hst` and `main_sdss`
+    should search this object to see if they need to adjust any settings. But
+    since nothing is actually helpful yet (we only have new settings for SN13038
+    and that changes the SB-cutoff) I will not implement that yet.
     """
     # LSB galaxy, Nothing is found with these settings!
     # SN19023 = {
@@ -411,8 +427,9 @@ if __name__ == "__main__":
     # map(main_hst, [13354, 13354], [25, 26])
 
     # get integers of the SN numbers/names
-    # names = np.array(ancillary.get_sn_names(), dtype=int)
+    names = np.array(ancillary.get_sn_names(), dtype=int)
     # map(main, names)
 
-    main_sdss(18415)
+    # main_sdss(14284)
     # map(main_hst, names)
+    map(main_sdss, names)
