@@ -71,23 +71,31 @@ def collect_data(flag):
 
     return fprs
 
-def main(flag, show=True):
+def main(flag, show=True, zeros=True):
     """
     flag : string
         do you wnat 'hst' or 'sdss'
 
     show : boolian
+        determins if you should show the figure or save it.
+
+    zeros : boolian
+        determins if you should plot zero-fpr's or not. default is to keep zeros
     """
     hst = collect_data('hst')
     hst = hst[1:]
     fpr_hst = np.array(hst[:,1], dtype=np.float)
     fpr_hst.sort()
+    if not zeros:
+        fpr_hst = fpr_hst[fpr_hst.nonzero()]
     cdf_hst = np.array(range(fpr_hst.size))/(fpr_hst.size-1)
 
     sdss = collect_data('sdss')
     sdss = sdss[1:]
     fpr_sdss = np.array(sdss[:,1], dtype=np.float)
     fpr_sdss.sort()
+    if not zeros:
+        fpr_sdss = fpr_sdss[fpr_sdss.nonzero()]
     cdf_sdss = np.array(range(fpr_sdss.size))/(fpr_sdss.size-1)
 
 
@@ -116,10 +124,15 @@ def main(flag, show=True):
     # plt.xlabel('Fractional Prixel Rank, of HST galaxies')
     # plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
 
+    # make referance
+    fpr_referacne = np.linspace(0, 1)
+    cdf_referance = fpr_referacne**2
+
     #plot combined cdf
     plt.figure('combined-cdf')
     plt.plot(fpr_sdss, cdf_sdss, label='sdss')
     plt.plot(fpr_hst, cdf_hst, label='hst')
+    plt.plot(fpr_referacne, cdf_referance, label=r'$\propto$ luminosity')
     plt.legend(loc=0)
     plt.xlabel('Fractional Prixel Rank')
     plt.ylabel('p(<pixel count rate)')     #the y-axis is the probabilty in a CDF
@@ -131,5 +144,5 @@ def main(flag, show=True):
         plt.savefig('figures/test.pdf')
 
 if __name__ == '__main__':
-    main('hst')
+    main('hst', zeros=True)
     # collect_data('hst')
