@@ -432,11 +432,14 @@ if __name__ == "__main__":
     # main_hst(13038)
     # map(main_hst, [13354, 13354], [25, 26])
 
+    #test to try and find SN19282 as a 2x2 in sdss
+    main_sdss(19282, minarea=3)
+
     # get integers of the SN numbers/names
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    names = np.array([13354], dtype=int)
+    # names = np.array([13354], dtype=int)
     # map(main, names)
 
     # main_sdss(14284)
     # map(main_hst, names)
-    map(main_sdss, names)
+    # map(main_sdss, names)
