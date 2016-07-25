@@ -7,17 +7,24 @@
     2016-07-20
     Licesed under the MIT License
 """
+from __future__ import print_function, division
+from os import path, makedirs
+
 import numpy as np
 import sep
 
 import astropy.stats
 from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+from astropy import units as u
 
 import ancillary
 import fractionalRank
 
 def getData(snid):
     """
+    snPixels returns as a tuple! so we can do np.array[snPixels] like a boss.
+    stupid wcs returns a list of np.arrays!
     """
     #F475W is like sdss-g (the blue-er filter)
     #F625W is like sdss-r (the red-er filter)
@@ -37,12 +44,19 @@ def getData(snid):
 
     # get sn location in pixles
     w = WCS(blueHDU[1].header)
-    snPixels = w.all_world2pix(position.ra.to(u.deg).value, 
+    xPixel, yPixel = w.all_world2pix(position.ra.to(u.deg).value, 
                                position.dec.to(u.deg).value, 0)
+    #all_world2pix is stupid with just one item to search for. I want a tuple of
+    # two float and this is the simple way to do that. With out this I get an
+    # array of arrays, but the iner arrays seem to not have a length? They are
+    # stupid and now floats!
+    #todo(these should be `round()` not `float()`, correct?)
+    snPixels = (int(round(xPixel)), int(round(yPixel)))     
+    #python2 round produces float, python3 produces int. I like python3!
 
     return blueHDU, blueData, redHDU, redData, snPixels
 
-def calculateSNR(blueData, redData, snPixels):
+def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     """
     Blah blah does preperation to simply run [`astropy.stas.signal_to_noise_oir_ccd`](http://docs.astropy.org/en/stable/api/astropy.stats.signal_to_noise_oir_ccd.html)
     # Parameters
@@ -65,6 +79,8 @@ def calculateSNR(blueData, redData, snPixels):
     blueSource = blueData[snPixels] #or something like this
     blueBkg = sep.Background(blueData)
     blueSky  = blueBkg.back()[snPixels]
+    
+    print('blue ', blueT, blueSource, blueSky)
 
     #red variables
     redT = redHDU[0].header['EXPTIME']        #s
@@ -72,16 +88,20 @@ def calculateSNR(blueData, redData, snPixels):
     redBkg = sep.Background(redData)
     redSky  = redBkg.back()[snPixels]
 
+    print('red ', redT, redSource, redSky)
+
     #use astropy stats to calculate snr                                    
     blueSNR = astropy.stats.signal_to_noise_oir_ccd(blueT, blueSource, blueSky, 
                                                     dark_eps, rd, npix)
     redSNR = astropy.stats.signal_to_noise_oir_ccd(redT, redSource, redSky, 
                                                    dark_eps, rd, npix)
 
+    print('snr ', blueSNR, redSNR)
+
     #do I want to return the souces value?
     return blueSNR, blueSource, redSNR, redSource
 
-def calcuateColor(blueCountRate, redCountRate, location):
+def calcuateColor(blueCountRate, redCountRate):
     """
     takes red-blue
     # Parameters
@@ -99,6 +119,24 @@ def calcuateColor(blueCountRate, redCountRate, location):
 
     return color
 
+def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
+    """
+    """
+    #Create saving location
+    #`defGalaxy.saveGalaxies()` has a more robust way to doing this.
+    saveFileName = 'resources/hst_color.csv'
+
+    #combine the data to make it writeable
+    #this chould be done with `np.array()` but this also works. 
+    #need double list because `np.savetxt` removes one. This makes `toWrite`
+    #a single row as desired.
+    toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, color]])
+    
+    #thanks to stackoverflow.com/questions/27786868/
+    #python3-numpy-appending-to-a-file-using-numpy-savetxt
+    #open the file to `append` and in `binary` (for python3) mode.
+    with open(saveFileName,'ab') as f:
+        np.savetxt(f, toWrite, delimiter=',')
 
 def main(snid):
     """
@@ -106,38 +144,28 @@ def main(snid):
     snid : int
         The SDSS-II Candidate ID number of the object you want to find the 
         host for.
- 
-    # Returns
     """
-    #skip objects that do not work
-    #objects with forground stars nearby
 
-    #import 
-    #import data files
-    #F475W is like sdss-g (the blue-er filter)
-    imageLocation = 'data/HST - renamed/SN{}_F475W_drz.fits'.format(snid)
-    hdu_blue, data_blue = ancillary.import_fits(imageLocation, 1)
-    #F625W is like sdss-r (the red-er filter)
-    imageLocation = 'data/HST - renamed/SN{}_F625W_drz.fits'.format(snid)
-    hdu_red, data_red = ancillary.import_fits(imageLocation, 1)
+    #Get Data
+    blueHDU, blueData, redHDU, redData, snPixels = getData(snid)
+    print(type(tuple(snPixels)))
+    #Calculate SNR
+    blueSNR, blueSource, redSNR, redSource = calculateSNR(blueHDU, blueData, 
+                                                          redHDU, redData, 
+                                                          snPixels)
 
-    #Get SN pixel locations
-    #todo(test if we get the same thing for both images.)
-    position = fractionalRank.get_SN_HST_coord(snid)
-    w = WCS(hdu_blue[1].header)
-    SNPixels = w.all_world2pix(position.ra.to(u.deg).value, 
-                               position.dec.to(u.deg).value, 0)
+    #Calculate Color
+    if blueSNR > 1.0 and redSNR > 1.0:
+        color = calcuateColor(blueSource, redSource)
+    else:
+        color = np.nan
+    print(color)
 
-    #for each filter, calculate S/N
-    snr_red = getSNR(snid)
-    snr_blue = getSNR(snid)
-
-    #gnerate save settings/locations
-
-    #save S/N
-
-    #if S/N (in each filter) is great enough, calculate color
-
-    #save color
+    #Save results 
+    saveData(snid, blueSNR, blueSource, redSNR, redSource, color)
     
-if __name__ == __main__:
+if __name__ == '__main__':
+    # main(20874)
+
+    names = np.array(ancillary.get_sn_names(), dtype=int)
+    map(main, names)
