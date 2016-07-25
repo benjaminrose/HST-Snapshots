@@ -352,6 +352,7 @@ def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
     thresh = sigma*bkg.globalrms
     #run sep
     sources = run_sep(data, thresh, minarea, deblendCont)
+    #todo(what is happening here?)
     np.savetxt('temp-sn2635-sdss-sources.csv', sources, delimiter=',', header='temp sn2635 sdss sources')
     print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
