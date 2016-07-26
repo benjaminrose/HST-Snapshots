@@ -135,8 +135,6 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     blueSource = blueData[snPixels] #or something like this
     blueBkg = sep.Background(blueData)
     blueSky  = blueBkg.back()[snPixels]
-    
-    print('blue ', blueT, blueSource, blueSky)
 
     #red variables
     redT = redHDU[0].header['EXPTIME']        #s
@@ -144,15 +142,11 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     redBkg = sep.Background(redData)
     redSky  = redBkg.back()[snPixels]
 
-    print('red ', redT, redSource, redSky)
-
     #use astropy stats to calculate snr                                    
     blueSNR = astropy.stats.signal_to_noise_oir_ccd(blueT, blueSource, blueSky, 
                                                     dark_eps, rd, npix)
     redSNR = astropy.stats.signal_to_noise_oir_ccd(redT, redSource, redSky, 
                                                    dark_eps, rd, npix)
-
-    print('snr ', blueSNR, redSNR)
 
     return blueSNR, blueSource, redSNR, redSource
 
@@ -238,7 +232,7 @@ def main(snid):
 
     #Get Data
     blueHDU, blueData, redHDU, redData, snPixels = getData(snid)
-    print(type(tuple(snPixels)))
+
     #Calculate SNR
     blueSNR, blueSource, redSNR, redSource = calculateSNR(blueHDU, blueData, 
                                                           redHDU, redData, 
@@ -249,7 +243,6 @@ def main(snid):
         color = calcuateColor(blueSource, redSource)
     else:
         color = np.nan
-    print(color)
 
     #Save results 
     saveData(snid, blueSNR, blueSource, redSNR, redSource, color)
