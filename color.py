@@ -152,8 +152,8 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
 
 def calcuateColor(blueCountRate, redCountRate):
     """
-    Calcuates the color for two count rate objects. Takes red-blue or more
-    exactly: $2.5 \times \log{\frac{blue}{red}}$. This is from the definition of
+    Calcuates the color for two count rate objects. Takes blue-red or more
+    exactly: $2.5 \times \log{\frac{red}{blue}}$. This is from the definition of
     [magnitude](https://en.wikipedia.org/wiki/Magnitude_%28astronomy%29).
 
     # Parameters
@@ -171,7 +171,7 @@ def calcuateColor(blueCountRate, redCountRate):
     """
     #mark says I need to take into account the ccd sensitity
     #todo(above)
-    color = 2.5*np.log10(blueCountRate/redCountRate)
+    color = 2.5*np.log10(redCountRate/blueCountRate)
 
     return color
 
