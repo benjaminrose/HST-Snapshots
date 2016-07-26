@@ -183,7 +183,7 @@ def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
     ```
     #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
     #snid, blueSNR, blueSource, redSNR, redSource, color
-    #    ,        , [counts/s],       , [counts/s], F625W-F475W [mag]
+    #    ,        , [counts/s],       , [counts/s], F475W-F625W [mag]
     ```
 
     # Parameters
