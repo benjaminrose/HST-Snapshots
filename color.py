@@ -7,9 +7,6 @@
     2016-07-20
     Licesed under the MIT License
 """
-from __future__ import print_function, division
-from os import path, makedirs
-
 import numpy as np
 import sep
 
@@ -23,8 +20,35 @@ import fractionalRank
 
 def getData(snid):
     """
-    snPixels returns as a tuple! so we can do np.array[snPixels] like a boss.
-    stupid wcs returns a list of np.arrays!
+    given a SDSS Transient ID, this gets the HST data for that object. Returns
+    both the HDU and the data as well as the pixles of the SN.
+
+    # Parameters
+    snid : int 
+        The SDSS Transient ID given as an int. (To be honest a string would be 
+        ok.)
+
+    # Returns
+    blueHDU : astropy.io.fits.HDUList
+        The resulting `HDUList` (for the bluer, F475W, filter) returned from the
+        import feature of `astropy`.
+
+    blueData : ndarray
+        The science data of the bluer, F475W, filter. From 
+        `blueHDU[extention].data`.
+
+    redHDU : astropy.io.fits.HDUList
+        The resulting `HDUList` (for the redder, F625W, filter) returned from 
+        the import feature of `astropy`.
+
+    redData : ndarray
+        The science data of the redder, F625W, filter. From 
+        `redHDU[extention].data`.
+
+    snPixels : tuple, two ints
+        The result of `all_world2pix` on the `WCS` of the `HDU` objects. A 
+        `tuple` of two `int`'s of the order $(x,y)$ and should be useable like
+        `snValue = data[snPixels]`
     """
     #F475W is like sdss-g (the blue-er filter)
     #F625W is like sdss-r (the red-er filter)
@@ -44,27 +68,59 @@ def getData(snid):
 
     # get sn location in pixles
     w = WCS(blueHDU[1].header)
-    xPixel, yPixel = w.all_world2pix(position.ra.to(u.deg).value, 
+    yPixel, xPixel = w.all_world2pix(position.ra.to(u.deg).value, 
                                position.dec.to(u.deg).value, 0)
     #all_world2pix is stupid with just one item to search for. I want a tuple of
     # two float and this is the simple way to do that. With out this I get an
     # array of arrays, but the iner arrays seem to not have a length? They are
     # stupid and now floats!
     #todo(these should be `round()` not `float()`, correct?)
-    snPixels = (int(round(xPixel)), int(round(yPixel)))     
+    snPixels = (np.round(xPixel), np.round(yPixel))    
     #python2 round produces float, python3 produces int. I like python3!
+    #somehow in python3 we need to use numpy's version of round.
 
     return blueHDU, blueData, redHDU, redData, snPixels
 
 def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     """
-    Blah blah does preperation to simply run [`astropy.stas.signal_to_noise_oir_ccd`](http://docs.astropy.org/en/stable/api/astropy.stats.signal_to_noise_oir_ccd.html)
+    Does the signal and noise calculations to simply run 
+    [`astropy.stas.signal_to_noise_oir_ccd`](http://docs.astropy.org/en/stable/api/astropy.stats.signal_to_noise_oir_ccd.html).
+    Returns the SNR and the signal for both the blue and red filters.
+    
     # Parameters
+    blueHDU : astropy.io.fits.HDUList
+        The resulting `HDUList` (for the bluer, F475W, filter) returned from the
+        import feature of `astropy`.
 
-    signal : float 
-        fed into `source_eps` and should be electrons per second. 
+    blueData : ndarray
+        The science data of the bluer, F475W, filter. From 
+        `blueHDU[extention].data`. Should be in [electrons/s].
+
+    redHDU : astropy.io.fits.HDUList
+        The resulting `HDUList` (for the redder, F625W, filter) returned from 
+        the import feature of `astropy`.
+
+    redData : ndarray
+        The science data of the redder, F625W, filter. From 
+        `redHDU[extention].data`. Should be in [electrons/s].
+
+    snPixels : tuple, two ints
+        The result of `all_world2pix` on the `WCS` of the `HDU` objects. A 
+        `tuple` of two `int`'s of the order $(x,y)$ and should be useable like 
+        `snValue = data[snPixels]`
 
     # Returns
+    blueSNR : float
+        The result of `signal_to_noise_oir_ccd` for `blueData` at `snPixles`.
+
+    blueSource : float
+        The value of `blueData` at `snPixles`. Should be in [electrons/s].
+
+    redSNR : float
+        The result of `signal_to_noise_oir_ccd` for `redData` at `snPixles`.
+
+    redSource : float
+        The value of `redData` at `snPixles`. Should be in [electrons/s].
     """
     #Calcualte varriables
     #same for all
@@ -98,21 +154,27 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
 
     print('snr ', blueSNR, redSNR)
 
-    #do I want to return the souces value?
     return blueSNR, blueSource, redSNR, redSource
 
 def calcuateColor(blueCountRate, redCountRate):
     """
-    takes red-blue
+    Calcuates the color for two count rate objects. Takes red-blue or more
+    exactly: $2.5 \times \log{\frac{blue}{red}}$. This is from the definition of
+    [magnitude](https://en.wikipedia.org/wiki/Magnitude_%28astronomy%29).
+
     # Parameters
-    blue
+    blueCountRate : float
+        The value, from the science data, at the location where the color
+        caluation is desired. Should be in [electrons/s].
+
+    redCountRate : float
+        The value, from the science data, at the location where the color
+        caluation is desired. Should be in [electrons/s].
 
     # Returns
+    color : float
+        The red mag minus blue mag from the count rates given. In [mag].
     """
-    # get data
-
-    #get SN location
-
     #mark says I need to take into account the ccd sensitity
     #todo(above)
     color = 2.5*np.log10(blueCountRate/redCountRate)
@@ -121,6 +183,34 @@ def calcuateColor(blueCountRate, redCountRate):
 
 def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
     """
+    Saves the input data as an appeneded line to `'resources/hst_color.csv'`. 
+    The file needs to exists. Puting header info would be good, such as:
+
+    ```
+    #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
+    #snid, blueSNR, blueSource, redSNR, redSource, color
+    #    ,        , [counts/s],       , [counts/s], F625W-F475W [mag]
+    ```
+
+    # Parameters
+    snid : int 
+        The SDSS Transient ID given as an int. (To be honest a string would be 
+        ok.) 
+
+    blueSNR : float
+        The result of `signal_to_noise_oir_ccd` for `blueData` at `snPixles`.
+
+    blueSource : float
+        The value of `blueData` at `snPixles`. Should be in [electrons/s].
+
+    redSNR : float
+        The result of `signal_to_noise_oir_ccd` for `redData` at `snPixles`.
+
+    redSource : float
+        The value of `redData` at `snPixles`. Should be in [electrons/s].
+
+    color : float
+        The red mag minus blue mag from the count rates given. In [mag].
     """
     #Create saving location
     #`defGalaxy.saveGalaxies()` has a more robust way to doing this.
@@ -168,4 +258,4 @@ if __name__ == '__main__':
     # main(20874)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    map(main, names)
+    list(map(main, names))
