@@ -7,6 +7,8 @@
     2016-07-20
     Licesed under the MIT License
 """
+import re
+
 import numpy as np
 import sep
 
@@ -159,31 +161,90 @@ def calcuateColor(blueCountRate, redCountRate):
     # Parameters
     blueCountRate : float
         The value, from the science data, at the location where the color
-        caluation is desired. Should be in [electrons/s].
+        caluation is desired. Should be in [electrons/s]. This is assumed to be
+        the F475W HST filter.
 
     redCountRate : float
         The value, from the science data, at the location where the color
-        caluation is desired. Should be in [electrons/s].
+        caluation is desired. Should be in [electrons/s]. This is assumed to be
+        the F625W HST filter.
 
     # Returns
     color : float
-        The red mag minus blue mag from the count rates given. In [mag].
+        The blue mag minus red mag from the count rates given. In [mag]. From
+        the AB system.
     """
-    #mark says I need to take into account the ccd sensitity
-    #todo(above)
-    color = 2.5*np.log10(redCountRate/blueCountRate)
+    # Content and idea from http://www.stsci.edu/hst/wfc3/phot_zp_lbn
+    #todp(are these a r=10 radius apature)
+    print(blueCountRate, redCountRate)
+    # blue header info
+    inverseSensitivity475W = 1.8267533E-19     #ergs/cm2/Ang/electron                    
+    PhotPlam475W = 4.7456221E+03               #Pivot wavelength (Angstroms) 
+    ABMagZpt475W = -2.5*np.log10(inverseSensitivity475W) - 5*np.log10(PhotPlam475W)-2.408
+    #from http://www.stsci.edu/hst/acs/analysis/zeropoints
+
+    # red header info
+    inverseSensitivity625W = 1.1931234E-19     #ergs/cm2/Ang/electron 
+    PhotPlam625W = 6.3120513E+03               #Pivot wavelength (Angstroms)                      
+    ABMagZpt625W = -2.5*np.log10(inverseSensitivity625W) - 5*np.log10(PhotPlam625W)-2.408
+    #from http://www.stsci.edu/hst/acs/analysis/zeropoints
+
+    #Calcualate AB mag
+    blueMag = -2.5*np.log10(blueCountRate) + ABMagZpt475W
+    redMag = -2.5*np.log10(redCountRate) + ABMagZpt625W
+
+    #calculate color
+    color = blueMag - redMag
+
+    #######
+    #Not needed, alternative calcuation methods
+    #for SN1415, these calcuate the same thing. 
+    # PhotZpt475W = -2.1100000E+01               #ST magnitude zero point 
+    # PhotZpt625W = -2.1100000E+01               #ST magnitude zero point 
+    # blueMag = -2.5*np.log10(blueCountRate) + PhotZpt475W
+    # redMag = -2.5*np.log10(redCountRate) + PhotZpt625W
+
+    # colorCount = 2.5*np.log10(redCountRate/blueCountRate)
+    # colorST = blueMag - redMag
+    #######
+    return color
+
+def getSDSSColor(snID):
+    """
+    """
+    #get snID in form of sdss data
+    sn = str(snID).zfill(6)
+    
+    #read second line from sdss photometry data
+    with open('data/SDSS - photometry/SMP_{0}.dat'.format(sn), 'r') as f:
+        f.readline()
+        f.readline()
+        third_line = f.readline()
+
+    #clean up second line and extract desired info
+    split = np.array( re.split(r'\s+', third_line) )     #split on whitespace
+    #the index of the g (r) values are 3 (4) spaces over from the first '='
+    gIndex = np.where(split == '=')[0]+3
+    rIndex = gIndex + 1
+    
+    #calcualte color
+    #todo(accoutn for units of asinh-mag/square-arcsec)
+    # S = m +2.5log(Area), m = S - 2.5log(Area)
+    gSB, rSB = float(split[gIndex][0]), float(split[rIndex][0])
+    #g-r is -2.5log(f_g/f_r)
+    color = -2.5*np.log10(gSB/rSB)
 
     return color
 
-def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
+def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
     """
     Saves the input data as an appeneded line to `'resources/hst_color.csv'`. 
     The file needs to exists. Puting header info would be good, such as:
 
     ```
     #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
-    #snid, blueSNR, blueSource, redSNR, redSource, color
-    #    ,        , [counts/s],       , [counts/s], F475W-F625W [mag]
+    #snid, blueSNR, blueSource, redSNR, redSource, color, sdss color
+    #    ,        , [counts/s],     , [counts/s], F475W-F625W [mag], g-r [mag]
     ```
 
     # Parameters
@@ -204,7 +265,10 @@ def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
         The value of `redData` at `snPixles`. Should be in [electrons/s].
 
     color : float
-        The red mag minus blue mag from the count rates given. In [mag].
+        The blue mag minus red mag from the count rates given. In [mag].
+
+    sdssColor : float
+        The g-r (in mag) of from the SDSS data
     """
     #Create saving location
     #`defGalaxy.saveGalaxies()` has a more robust way to doing this.
@@ -214,7 +278,9 @@ def saveData(snid, blueSNR, blueSource, redSNR, redSource, color):
     #this chould be done with `np.array()` but this also works. 
     #need double list because `np.savetxt` removes one. This makes `toWrite`
     #a single row as desired.
-    toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, color]])
+    #using `args` might be better?
+    toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, 
+                         color, sdssColor]])
     
     #thanks to stackoverflow.com/questions/27786868/
     #python3-numpy-appending-to-a-file-using-numpy-savetxt
@@ -239,16 +305,19 @@ def main(snid):
                                                           snPixels)
 
     #Calculate Color
-    if blueSNR > 1.0 and redSNR > 1.0:
+    if blueSNR > 2.0 and redSNR > 2.0:
         color = calcuateColor(blueSource, redSource)
     else:
         color = np.nan
 
+    sdssColor = getSDSSColor(snid)
+
     #Save results 
-    saveData(snid, blueSNR, blueSource, redSNR, redSource, color)
+    saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor)
     
 if __name__ == '__main__':
     # main(20874)
+    # main(1415)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
     list(map(main, names))
