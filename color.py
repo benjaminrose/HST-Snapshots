@@ -190,8 +190,14 @@ def calcuateColor(blueCountRate, redCountRate):
     #from http://www.stsci.edu/hst/acs/analysis/zeropoints
 
     #Calcualate AB mag
+    #get initial converstion 
     blueMag = -2.5*np.log10(blueCountRate) + ABMagZpt475W
     redMag = -2.5*np.log10(redCountRate) + ABMagZpt625W
+    #account for resoved source needing to be mag/sqr-arcsec
+    pixelScale = 0.05     #arcsec/pixel
+    scaling = 1.0/pixelScale**2
+    blueMag = blueMag - 2.5*np.log10(scaling)
+    redMag = redMag - 2.5*np.log10(scaling)
 
     #calculate color
     color = blueMag - redMag
@@ -207,7 +213,7 @@ def calcuateColor(blueCountRate, redCountRate):
     # colorCount = 2.5*np.log10(redCountRate/blueCountRate)
     # colorST = blueMag - redMag
     #######
-    return color
+    return blueMag, redMag, color
 
 def getSDSSColor(snID):
     """
@@ -231,12 +237,19 @@ def getSDSSColor(snID):
     #todo(accoutn for units of asinh-mag/square-arcsec)
     # S = m +2.5log(Area), m = S - 2.5log(Area)
     gSB, rSB = float(split[gIndex][0]), float(split[rIndex][0])
+    # print('split: ', split)
+    # print('index: ', gIndex, rIndex)
+    gmag = -2.5*np.log10(gSB*1e-6/3631)
+    rmag = -2.5*np.log10(rSB*1e-6/3631)
+    # print('mag: ', gmag, rmag)
+    # from sys import exit; exit()
     #g-r is -2.5log(f_g/f_r)
     color = -2.5*np.log10(gSB/rSB)
 
-    return color
+    return gmag, rmag, color
 
-def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
+# def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
+def saveData(*args):
     """
     Saves the input data as an appeneded line to `'resources/hst_color.csv'`. 
     The file needs to exists. Puting header info would be good, such as:
@@ -279,8 +292,9 @@ def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
     #need double list because `np.savetxt` removes one. This makes `toWrite`
     #a single row as desired.
     #using `args` might be better?
-    toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, 
-                         color, sdssColor]])
+    # toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, 
+                         # color, sdssColor]])
+    toWrite = [args]
     
     #thanks to stackoverflow.com/questions/27786868/
     #python3-numpy-appending-to-a-file-using-numpy-savetxt
@@ -305,15 +319,16 @@ def main(snid):
                                                           snPixels)
 
     #Calculate Color
-    if blueSNR > 2.0 and redSNR > 2.0:
-        color = calcuateColor(blueSource, redSource)
+    if blueSNR > 5.0 and redSNR > 5.0:
+        blueMag, redMag, color = calcuateColor(blueSource, redSource)
     else:
-        color = np.nan
+        blueMag, redMag, color = np.nan, np.nan, np.nan
 
-    sdssColor = getSDSSColor(snid)
+    sdssG, sdssR, sdssColor = getSDSSColor(snid)
 
     #Save results 
-    saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor)
+    saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
+             color, sdssG, sdssR, sdssColor)
     
 if __name__ == '__main__':
     # main(20874)
