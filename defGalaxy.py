@@ -256,6 +256,7 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
     data = smooth_Image(data, stDev)
 
     # find threshold
+    #todo(update to ACS/WFC rather then the WFC3 that I used at first.)
     #the magniutde per pixel for the same SB, wikipedia for equation
     magPerPixel = surfaceBrightness - 2.5*np.log10(0.04**2)
     #convert to AB-mag to flux

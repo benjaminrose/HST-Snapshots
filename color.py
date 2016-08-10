@@ -128,6 +128,7 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     #same for all
     #from [Wide Field Camera 3 Instrument Handbook for Cycle 24]
     #(http://www.stsci.edu/hst/wfc3/documents/handbooks/currentIHB/wfc3_ihb.pdf)
+    #todo(update to ACS/WFC)
     dark_eps = 0.001944444    #e-/s
     rd = 3.1                  #e-
     npix = 1.0
