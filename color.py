@@ -77,13 +77,13 @@ def getData(snid):
     # array of arrays, but the iner arrays seem to not have a length? They are
     # stupid and now floats!
     #todo(these should be `round()` not `float()`, correct?)
-    snPixels = (np.round(xPixel), np.round(yPixel))    
+    snPixels = (int(np.round(xPixel)), int(np.round(yPixel)))    
     #python2 round produces float, python3 produces int. I like python3!
     #somehow in python3 we need to use numpy's version of round.
 
     return blueHDU, blueData, redHDU, redData, snPixels
 
-def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
+def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels, size=0):
     """
     Does the signal and noise calculations to simply run 
     [`astropy.stas.signal_to_noise_oir_ccd`](http://docs.astropy.org/en/stable/api/astropy.stats.signal_to_noise_oir_ccd.html).
@@ -111,6 +111,13 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
         `tuple` of two `int`'s of the order $(x,y)$ and should be useable like 
         `snValue = data[snPixels]`
 
+    size : int
+        The number of pixels to around `snPixels` that should be accounted for
+        in the size of the appeture. By delfault `size = 0`, so only the 
+        `snPixel` is used. If `size = 1` then an extra pixel is added in each 
+        direction making a 3x3 square with `snPixel` at the center. With `size 
+        = 2`, a 5x5 square is used.
+
     # Returns
     blueSNR : float
         The result of `signal_to_noise_oir_ccd` for `blueData` at `snPixles`.
@@ -131,19 +138,26 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels):
     #todo(update to ACS/WFC)
     dark_eps = 0.001944444    #e-/s
     rd = 3.1                  #e-
-    npix = 1.0
+    npix = (2.0*size + 1.0)**2
 
     #blue variables
     blueT = blueHDU[0].header['EXPTIME']        #s
-    blueSource = blueData[snPixels] #or something like this
+    blueSource = blueData[snPixels[0]-size:snPixels[0]+size+1,
+                          snPixels[1]-size:snPixels[1]+size+1].sum()
     blueBkg = sep.Background(blueData)
-    blueSky  = blueBkg.back()[snPixels]
+    #sky needs to be for one pixel signal_to_noise_oir_ccd multiplies by npix
+    blueSky  = blueBkg.back()[snPixels[0]-size:snPixels[0]+size+1,
+                              snPixels[1]-size:snPixels[1]+size+1].mean()
 
     #red variables
     redT = redHDU[0].header['EXPTIME']        #s
-    redSource = redData[snPixels] #or something like this
+    redSource = redData[snPixels[0]-size:snPixels[0]+size+1,
+                        snPixels[1]-size:snPixels[1]+size+1].sum()
     redBkg = sep.Background(redData)
-    redSky  = redBkg.back()[snPixels]
+    #sky needs to be for one pixel signal_to_noise_oir_ccd multiplies by npix
+    redSky  = redBkg.back()[snPixels[0]-size:snPixels[0]+size+1,
+                            snPixels[1]-size:snPixels[1]+size+1].mean()
+    # redSky  = redBkg.back()[snPixels]                            
 
     #use astropy stats to calculate snr                                    
     blueSNR = astropy.stats.signal_to_noise_oir_ccd(blueT, blueSource, blueSky, 
@@ -177,7 +191,7 @@ def calcuateColor(blueCountRate, redCountRate):
     """
     # Content and idea from http://www.stsci.edu/hst/wfc3/phot_zp_lbn
     #todp(are these a r=10 radius apature)
-    print(blueCountRate, redCountRate)
+
     # blue header info
     inverseSensitivity475W = 1.8267533E-19     #ergs/cm2/Ang/electron                    
     PhotPlam475W = 4.7456221E+03               #Pivot wavelength (Angstroms) 
@@ -303,24 +317,30 @@ def saveData(*args):
     with open(saveFileName,'ab') as f:
         np.savetxt(f, toWrite, delimiter=',')
 
-def main(snid):
+def main(snid, snr=2):
     """
     # Parameters
     snid : int
         The SDSS-II Candidate ID number of the object you want to find the 
         host for.
+
+    snr : float
+        The SNR cut off for calcualting the HST color.
     """
 
     #Get Data
     blueHDU, blueData, redHDU, redData, snPixels = getData(snid)
 
     #Calculate SNR
+    size = 4     #this is a 2*4+1 or 9 per side. 
+                 #this gets us a bit larger then sdss (0.4 arcsec/pixel) form
+                 #hst's (0.05 arcsec/pixel)
     blueSNR, blueSource, redSNR, redSource = calculateSNR(blueHDU, blueData, 
                                                           redHDU, redData, 
-                                                          snPixels)
+                                                          snPixels, size)
 
     #Calculate Color
-    if blueSNR > 5.0 and redSNR > 5.0:
+    if blueSNR > snr and redSNR > snr:
         blueMag, redMag, color = calcuateColor(blueSource, redSource)
     else:
         blueMag, redMag, color = np.nan, np.nan, np.nan
@@ -334,6 +354,8 @@ def main(snid):
 if __name__ == '__main__':
     # main(20874)
     # main(1415)
+    # main(14279, 5.0)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    list(map(main, names))
+    snr = np.ones(names.shape)*20.0
+    list(map(main, names, snr))
