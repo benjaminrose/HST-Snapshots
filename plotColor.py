@@ -9,6 +9,8 @@ from scipy.optimize import curve_fit
 # data = pd.read_csv('hst_sdss_color_snr2.csv')
 # data = pd.read_csv('resources/hst_color.csv',header=1, skiprows=[2])
 data = np.genfromtxt('resources/hst_color.csv', delimiter=',', names=True, skip_header=1)
+data20 = np.genfromtxt('resources/color_snr20.csv', delimiter=',', names=True, skip_header=1)
+data = data20
 
 # fit color data
 def func(x, m, b):
@@ -19,17 +21,19 @@ badData2 = np.isnan(data['sdss_color'])
 badData = np.logical_or(badData1, badData2)
 hst = data['color'][~badData]
 sdss = data['sdss_color'][~badData]
-popt, pcov = curve_fit(func, hst, sdss)
+popt, pcov = curve_fit(func, sdss, hst)
 
 print(popt)
 print(pcov)
 fig = plt.figure('color-color correleation')
 ax = fig.add_subplot(111)
-ax.scatter(data['color'], data['sdss_color'])
+# ax.axis('equal')
+ax.scatter(data['sdss_color'],data['color'])
 ax.plot(color, func(color, *popt))
-plt.xlabel('hst [475W-625W]')
-plt.ylabel('sdss [g-r]')
-plt.xlim(0.2, 1.5)
+plt.ylabel('hst [475W-625W]')
+plt.xlabel('sdss [g-r]')
+plt.xlim(0.1, 1.6)
+plt.ylim(0.1, 1.6)
 ax.text(0.3, 1.5, r"y = m*x + b")
 ax.text(0.3, 1.4, r"m = {0:.3f} +/- {1:.3f}".format(popt[0], pcov[0,0]**0.5))
 ax.text(0.3, 1.3, r"b = {0:.3f} +/- {1:.3f}".format(popt[1], pcov[1,1]**0.5))

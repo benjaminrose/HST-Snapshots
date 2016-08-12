@@ -1,5 +1,5 @@
 #The SNR and color analysis of local environment around SDSS SNIa viewed by HST,,,,,,,,,,
-snid, blueSNR, blueSource, blue mag, redSNR, redSource, red mag, color, g band, r band, sdss color
+#snid, blueSNR, blueSource,blue mag, redSNR, redSource,red mag, color,g band,r band,sdss color
 # , , [counts/s],[mag], , [counts/s],[mag], F475W-F625W [mag],,,g-r [mag]
 12781,9.3884067941,1.0085736513,nan,15.8831509964,2.0839333534,nan,nan,24.0674868845,23.1313255275,0.936161357
 12860,20.7337566195,2.5045762062,18.5543489068,28.064364263,3.9241909981,17.909908716,0.6444401908,23.2457192539,22.5306288588,0.7150903951

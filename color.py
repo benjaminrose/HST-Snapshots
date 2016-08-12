@@ -357,5 +357,5 @@ if __name__ == '__main__':
     # main(14279, 5.0)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    snr = np.ones(names.shape)*20.0
+    snr = np.ones(names.shape)*18.0
     list(map(main, names, snr))
