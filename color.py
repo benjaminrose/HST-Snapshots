@@ -252,16 +252,23 @@ def getSDSSColor(snID):
     #todo(accoutn for units of asinh-mag/square-arcsec)
     # S = m +2.5log(Area), m = S - 2.5log(Area)
     gSB, rSB = float(split[gIndex][0]), float(split[rIndex][0])
+    #todo(do this correct)
+    gUncertIndex = gIndex + 8
+    rUncertIndex = rIndex + 8
+    uncertG, uncertR = float(split[gUncertIndex][0]), float(split[rUncertIndex][0])
     # print('split: ', split)
     # print('index: ', gIndex, rIndex)
     gmag = -2.5*np.log10(gSB*1e-6/3631)
     rmag = -2.5*np.log10(rSB*1e-6/3631)
+    uncertGMag = uncertG*np.abs(2.5 / (gmag*np.log(10)))
+    uncertRMag = uncertR*np.abs(2.5 / (rmag*np.log(10)))
     # print('mag: ', gmag, rmag)
     # from sys import exit; exit()
     #g-r is -2.5log(f_g/f_r)
     color = -2.5*np.log10(gSB/rSB)
+    uncertColor = uncertGMag + uncertRMag
 
-    return gmag, rmag, color
+    return gmag, rmag, color, uncertColor
 
 # def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
 def saveData(*args):
@@ -345,17 +352,19 @@ def main(snid, snr=2):
     else:
         blueMag, redMag, color = np.nan, np.nan, np.nan
 
-    sdssG, sdssR, sdssColor = getSDSSColor(snid)
+    sdssG, sdssR, sdssColor, sdssUncertColor = getSDSSColor(snid)
 
+    print(sdssColor, sdssUncertColor)
+    
     #Save results 
-    saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
-             color, sdssG, sdssR, sdssColor)
+    # saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
+             # color, sdssG, sdssR, sdssColor)
     
 if __name__ == '__main__':
     # main(20874)
-    # main(1415)
+    main(1415)
     # main(14279, 5.0)
 
-    names = np.array(ancillary.get_sn_names(), dtype=int)
-    snr = np.ones(names.shape)*18.0
-    list(map(main, names, snr))
+    # names = np.array(ancillary.get_sn_names(), dtype=int)
+    # snr = np.ones(names.shape)*18.0
+    # list(map(main, names, snr))
