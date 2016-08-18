@@ -260,13 +260,14 @@ def getSDSSColor(snID):
     # print('index: ', gIndex, rIndex)
     gmag = -2.5*np.log10(gSB*1e-6/3631)
     rmag = -2.5*np.log10(rSB*1e-6/3631)
-    uncertGMag = uncertG*np.abs(2.5 / (gmag*np.log(10)))
-    uncertRMag = uncertR*np.abs(2.5 / (rmag*np.log(10)))
+    uncertGMag = uncertG*np.abs(2.5 / (gSB*np.log(10)))
+    uncertRMag = uncertR*np.abs(2.5 / (rSB*np.log(10)))
     # print('mag: ', gmag, rmag)
     # from sys import exit; exit()
     #g-r is -2.5log(f_g/f_r)
     color = -2.5*np.log10(gSB/rSB)
-    uncertColor = uncertGMag + uncertRMag
+    #magnitude error is like a percet error, so add in quadriture
+    uncertColor = np.sqrt(uncertGMag**2 + uncertRMag**2)
 
     return gmag, rmag, color, uncertColor
 
@@ -278,8 +279,8 @@ def saveData(*args):
 
     ```
     #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
-    #snid, blueSNR, blueSource, redSNR, redSource, color, sdss color
-    #    ,        , [counts/s],     , [counts/s], F475W-F625W [mag], g-r [mag]
+    #snid, blueSNR, blueSource, redSNR, redSource, color, sdss color, uncertainty
+    #    ,        , [counts/s],     , [counts/s], F475W-F625W [mag], g-r [mag], [mag]
     ```
 
     # Parameters
@@ -354,17 +355,15 @@ def main(snid, snr=2):
 
     sdssG, sdssR, sdssColor, sdssUncertColor = getSDSSColor(snid)
 
-    print(sdssColor, sdssUncertColor)
-    
     #Save results 
-    # saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
-             # color, sdssG, sdssR, sdssColor)
+    saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
+             color, sdssG, sdssR, sdssColor, sdssUncertColor)
     
 if __name__ == '__main__':
     # main(20874)
-    main(1415)
+    # main(1415)
     # main(14279, 5.0)
 
-    # names = np.array(ancillary.get_sn_names(), dtype=int)
-    # snr = np.ones(names.shape)*18.0
-    # list(map(main, names, snr))
+    names = np.array(ancillary.get_sn_names(), dtype=int)
+    snr = np.ones(names.shape)*18.0
+    list(map(main, names, snr))
