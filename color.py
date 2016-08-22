@@ -167,7 +167,7 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels, size=0):
 
     return blueSNR, blueSource, redSNR, redSource
 
-def calcuateColor(blueCountRate, redCountRate):
+def calcuateColor(blueCountRate, redCountRate, scale):
     """
     Calcuates the color for two count rate objects. Takes blue-red or more
     exactly: $2.5 \times \log{\frac{red}{blue}}$. This is from the definition of
@@ -210,7 +210,7 @@ def calcuateColor(blueCountRate, redCountRate):
     redMag = -2.5*np.log10(redCountRate) + ABMagZpt625W
     #account for resoved source needing to be mag/sqr-arcsec
     pixelScale = 0.05     #arcsec/pixel
-    scaling = 1.0/pixelScale**2
+    scaling = scale/pixelScale**2
     blueMag = blueMag - 2.5*np.log10(scaling)
     redMag = redMag - 2.5*np.log10(scaling)
 
@@ -228,6 +228,8 @@ def calcuateColor(blueCountRate, redCountRate):
     # colorCount = 2.5*np.log10(redCountRate/blueCountRate)
     # colorST = blueMag - redMag
     #######
+
+    #calucate uncertatinty
     return blueMag, redMag, color
 
 def getSDSSColor(snID):
@@ -337,33 +339,54 @@ def main(snid, snr=2):
     """
 
     #Get Data
-    blueHDU, blueData, redHDU, redData, snPixels = getData(snid)
+    F475HDU, F475Data, redHDU, redData, snPixels = getData(snid)
+
+    #get SDSS color for referance quality
+    sdssG, sdssR, sdssColor, sdssColorUncert = getSDSSColor(snid)
 
     #Calculate SNR
-    size = 4     #this is a 2*4+1 or 9 per side. 
-                 #this gets us a bit larger then sdss (0.4 arcsec/pixel) form
-                 #hst's (0.05 arcsec/pixel)
-    blueSNR, blueSource, redSNR, redSource = calculateSNR(blueHDU, blueData, 
-                                                          redHDU, redData, 
-                                                          snPixels, size)
+    #set defualts to be sdss, will be overwritten if hst is better
+    use = 'sdss'
+    color, colorUncert = sdssColor, sdssColorUncert
+    F475Mag, redMag, hstColor, hstColorUncert = np.nan, np.nan, np.nan, np.nan
+    #size is a 2*n+1 or 9 per side for n=4. 
+    #n=4 overscales hst (0.05 arcsec/pixel) more than sdss (0.4 arcsec/pixel)
+    #perfect scaling is 8. 
+    #Don't search for HST scaled by 4, that is not going to be better then SDSS
+    
+    for size in np.arange(4):
+        (F475SNR, F475Source, redSNR, 
+            redSource) = calculateSNR(F475HDU, F475Data, redHDU, redData, 
+                                      snPixels, size)
+        #flag what color to use, exit if quality if better
+        #todo(thie needs to be a higher quality standard. becuase we should bin
+        # a bit if we can get a better SNR. We should be closer to the midean of
+        # sdss. Since this will be essesically THE error for the hst data.)
+        #todo(or we can have the error just be better then the SDSS error?)
+        #todo(do not let negative SNR rates through.)
+        if 1/F475SNR < 0.1:
+            #Calculate HST Color
+            F475Mag, redMag, hstColor = calcuateColor(F475Source, redSource, 
+                                                      size)
+            # I should do this, http://spiff.rit.edu/classes/phys445/lectures/signal/signal_illus.html
+            # it says that "the uncertainty in magnitudes will be 1.08 times the
+            # fractional uncertainty in brightness" with the fractional = 1/SNR.
+            hstColorUncert = np.sqrt(1/F475SNR**2 + 1/redSNR**2)
+            use = 'hst'
+            color, colorUncert = hstColor, hstColorUncert
+            break
 
-    #Calculate Color
-    if blueSNR > snr and redSNR > snr:
-        blueMag, redMag, color = calcuateColor(blueSource, redSource)
-    else:
-        blueMag, redMag, color = np.nan, np.nan, np.nan
 
-    sdssG, sdssR, sdssColor, sdssUncertColor = getSDSSColor(snid)
-
-    #Save results 
-    saveData(snid, blueSNR, blueSource, blueMag, redSNR, redSource, redMag,
-             color, sdssG, sdssR, sdssColor, sdssUncertColor)
+    #Save results, Outlined in 2016-08-19 lab notebook.
+    # saveData(snid, F475SNR, F475Source, F475Mag, redSNR, redSource, redMag,
+             # color, sdssG, sdssR, sdssColor, sdssColorUncert, use, size)
+    print(snid, sdssColor, sdssColorUncert, size, hstColor, hstColorUncert, use, color, colorUncert)
     
 if __name__ == '__main__':
     # main(20874)
-    # main(1415)
+    main(1415)
     # main(14279, 5.0)
 
-    names = np.array(ancillary.get_sn_names(), dtype=int)
-    snr = np.ones(names.shape)*18.0
-    list(map(main, names, snr))
+    # names = np.array(ancillary.get_sn_names(), dtype=int)
+    # snr = np.ones(names.shape)*18.0
+    # list(map(main, names, snr))
