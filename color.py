@@ -8,6 +8,7 @@
     Licesed under the MIT License
 """
 import re
+import warnings
 
 import numpy as np
 import sep
@@ -209,15 +210,16 @@ def calcuateColor(F475CountRate, F625CountRate, scale):
     #get initial converstion 
     F475Mag = -2.5*np.log10(F475CountRate) + ABMagZpt475W
     F625Mag = -2.5*np.log10(F625CountRate) + ABMagZpt625W
-    #account for resoved source needing to be mag/sqr-arcsec
-    pixelScale = 0.05     #arcsec/pixel
-    scaling = scale/pixelScale**2
-    F475Mag = F475Mag - 2.5*np.log10(scaling)
-    F625Mag = F625Mag - 2.5*np.log10(scaling)
+    #account for resoved source needing to be mag/sqr-arcsec & scaling number of pixels
+    pixelScale = 0.05               #arcsec/pixel
+    npix = (2.0*scale + 1.0)**2      #pixels**2
+    area = npix/pixelScale**2    #arcsec**2
+    F475Mag = F475Mag - 2.5*np.log10(area)
+    F625Mag = F625Mag - 2.5*np.log10(area)
 
     #calculate color
     color = F475Mag - F625Mag
-
+    
     #######
     #Not needed, alternative calcuation methods
     #for SN1415, these calcuate the same thing. 
@@ -255,22 +257,26 @@ def getSDSSColor(snID):
     #todo(accoutn for units of asinh-mag/square-arcsec)
     # S = m +2.5log(Area), m = S - 2.5log(Area)
     gSB, rSB = float(split[gIndex][0]), float(split[rIndex][0])
-    #todo(do this correct)
-    gUncertIndex = gIndex + 8
-    rUncertIndex = rIndex + 8
-    uncertG, uncertR = float(split[gUncertIndex][0]), float(split[rUncertIndex][0])
-    # print('split: ', split)
-    # print('index: ', gIndex, rIndex)
-    gMag = -2.5*np.log10(gSB*1e-6/3631)
-    rMag = -2.5*np.log10(rSB*1e-6/3631)
-    gMagUncert = uncertG*np.abs(2.5 / (gSB*np.log(10)))
-    rMagUncert = uncertR*np.abs(2.5 / (rSB*np.log(10)))
-    # print('mag: ', gMag, rMag)
-    # from sys import exit; exit()
-    #g-r is -2.5log(f_g/f_r)
-    color = -2.5*np.log10(gSB/rSB)
-    #magnitude error is like a percet error, so add in quadriture
-    colorUncert = np.sqrt(gMagUncert**2 + rMagUncert**2)
+    if gSB < 0 or rSB < 0:
+        #Abort, we got a negative flux!
+        warnings.warn(r'SN{} has a negative flux: g = {} μJy/sqr-arcsec, r = {} μJy/sqr-arcsec,'.format(snID, gSB, rSB))
+        gMag, gMagUncert, rMag, rMagUncert, color, colorUncert = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan 
+    else:
+        #todo(do this correct)
+        gUncertIndex = gIndex + 8
+        rUncertIndex = rIndex + 8
+        uncertG, uncertR = float(split[gUncertIndex][0]), float(split[rUncertIndex][0])
+        
+        gMag = -2.5*np.log10(gSB*1e-6/3631)
+        rMag = -2.5*np.log10(rSB*1e-6/3631)
+        gMagUncert = uncertG*np.abs(2.5 / (gSB*np.log(10)))
+        rMagUncert = uncertR*np.abs(2.5 / (rSB*np.log(10)))
+        # print('mag: ', gMag, rMag)
+        # from sys import exit; exit()
+        #g-r is -2.5log(f_g/f_r)
+        color = -2.5*np.log10(gSB/rSB)
+        #magnitude error is like a percet error, so add in quadriture
+        colorUncert = np.sqrt(gMagUncert**2 + rMagUncert**2)
 
     return gMag, gMagUncert, rMag, rMagUncert, color, colorUncert
 
@@ -351,7 +357,7 @@ def saveData(*args):
     # with open(saveFileName,'ab') as f:
     #     np.savetxt(f, toWrite, delimiter=',')
     # `binary` might not like strings.
-    toWrite.to_csv(saveFileName, mode='a', header=False, index=False)
+    toWrite.to_csv(saveFileName, mode='a', header=False, index=False, na_rep='nan')
 
 def main(snid, snr=2):
     """
@@ -391,7 +397,7 @@ def main(snid, snr=2):
         #todo(or we can have the error just be better then the SDSS error?)
         #todo(do not let negative SNR rates through.)
         #1.08 is the difference between mag and fractional uncertanties.
-        if 1.08/F475SNR < 0.1:
+        if 1.08/F475SNR < 0.1 and F475SNR > 0:
             #Calculate HST Color
             F475Mag, F625Mag, hstColor = calcuateColor(F475Source, F625Source, 
                                                       size)
@@ -409,13 +415,16 @@ def main(snid, snr=2):
     saveData(snid, sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, 
              sdssColorUncert, size, F475Mag, F475SNR, F625Mag, F625SNR, 
              hstColor, hstColorUncert, use, color, colorUncert)
-    # saveData(snid, F475SNR, F475Source, F475Mag, F625SNR, F625Source, F625Mag,
+    # #OLD DONT USE# saveData(snid, F475SNR, F475Source, F475Mag, F625SNR, F625Source, F625Mag,
              # color, sdssG, sdssR, sdssColor, sdssColorUncert, use, size)
     # print(snid, sdssColor, sdssColorUncert, size, hstColor, hstColorUncert, use, color, colorUncert)
+    # print(snid, sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, 
+    #          sdssColorUncert, size, F475Mag, F475SNR, F625Mag, F625SNR, 
+    #          hstColor, hstColorUncert, use, color, colorUncert)
     
 if __name__ == '__main__':
     # main(20874)
-    # main(1415)
+    # main(14284)
     # main(14279, 5.0)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
