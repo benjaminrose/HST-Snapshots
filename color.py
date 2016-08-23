@@ -11,6 +11,7 @@ import re
 
 import numpy as np
 import sep
+import pandas as pd
 
 import astropy.stats
 from astropy.wcs import WCS
@@ -260,18 +261,18 @@ def getSDSSColor(snID):
     uncertG, uncertR = float(split[gUncertIndex][0]), float(split[rUncertIndex][0])
     # print('split: ', split)
     # print('index: ', gIndex, rIndex)
-    gmag = -2.5*np.log10(gSB*1e-6/3631)
-    rmag = -2.5*np.log10(rSB*1e-6/3631)
-    uncertGMag = uncertG*np.abs(2.5 / (gSB*np.log(10)))
-    uncertRMag = uncertR*np.abs(2.5 / (rSB*np.log(10)))
-    # print('mag: ', gmag, rmag)
+    gMag = -2.5*np.log10(gSB*1e-6/3631)
+    rMag = -2.5*np.log10(rSB*1e-6/3631)
+    gMagUncert = uncertG*np.abs(2.5 / (gSB*np.log(10)))
+    rMagUncert = uncertR*np.abs(2.5 / (rSB*np.log(10)))
+    # print('mag: ', gMag, rMag)
     # from sys import exit; exit()
     #g-r is -2.5log(f_g/f_r)
     color = -2.5*np.log10(gSB/rSB)
     #magnitude error is like a percet error, so add in quadriture
-    uncertColor = np.sqrt(uncertGMag**2 + uncertRMag**2)
+    colorUncert = np.sqrt(gMagUncert**2 + rMagUncert**2)
 
-    return gmag, rmag, color, uncertColor
+    return gMag, gMagUncert, rMag, rMagUncert, color, colorUncert
 
 # def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
 def saveData(*args):
@@ -281,32 +282,53 @@ def saveData(*args):
 
     ```
     #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
-    #snid, blueSNR, blueSource, redSNR, redSource, color, sdss color, uncertainty
-    #    ,        , [counts/s],     , [counts/s], F475W-F625W [mag], g-r [mag], [mag]
+    #snid, sdss g mag, sdss g uncert, sdss r mag, sdss r uncert, sdss color, sdss c olor uncert,   hst size, F475W mag, F475W SNR, F625W mag, F625W SNR, hst color, hst color uncert, use, color, color uncert
+    #    ,      [mag],         [mag],      [mag],         [mag],      [mag],              [mag], [1,2 or 3],     [mag],          ,     [mag],          ,     [mag],            [mag],    , [mag],        [mag]
     ```
+
+    Explantions and details of these parameters can be seen below.
 
     # Parameters
     snid : int 
         The SDSS Transient ID given as an int. (To be honest a string would be 
         ok.) 
 
-    blueSNR : float
-        The result of `signal_to_noise_oir_ccd` for `blueData` at `snPixles`.
+    sdssG : 
 
-    blueSource : float
-        The value of `blueData` at `snPixles`. Should be in [electrons/s].
+    sdssGUncert : 
 
-    redSNR : float
-        The result of `signal_to_noise_oir_ccd` for `redData` at `snPixles`.
+    sdssR :
+    
+    sdssrUncert :
 
-    redSource : float
-        The value of `redData` at `snPixles`. Should be in [electrons/s].
-
-    color : float
-        The blue mag minus red mag from the count rates given. In [mag].
-
-    sdssColor : float
+    sdssColor :
         The g-r (in mag) of from the SDSS data
+
+    sdssColorUncert :
+
+    size :
+
+    F475Mag :
+
+    F475SNR :
+        The result of `signal_to_noise_oir_ccd` for `F475Data` at `snPixles`.
+
+    F625Mag :
+
+    F625SNR :
+        The result of `signal_to_noise_oir_ccd` for `F625Data` at `snPixles`.
+
+    hstColor :
+        The F475W (blue) mag minus F625W (red) mag from the count rates given. 
+        In [mag].
+
+    hstColorUncert :
+
+    use :
+
+    color :
+
+    colorUncert :
     """
     #Create saving location
     #`defGalaxy.saveGalaxies()` has a more robust way to doing this.
@@ -319,13 +341,17 @@ def saveData(*args):
     #using `args` might be better?
     # toWrite = np.stack([[snid, blueSNR, blueSource, redSNR, redSource, 
                          # color, sdssColor]])
-    toWrite = [args]
+    #convert to dataframe, becasue `np.savetxt` appears to not be able to take strings
+    toWrite = pd.DataFrame([args])
+
     
     #thanks to stackoverflow.com/questions/27786868/
     #python3-numpy-appending-to-a-file-using-numpy-savetxt
     #open the file to `append` and in `binary` (for python3) mode.
-    with open(saveFileName,'ab') as f:
-        np.savetxt(f, toWrite, delimiter=',')
+    # with open(saveFileName,'ab') as f:
+    #     np.savetxt(f, toWrite, delimiter=',')
+    # `binary` might not like strings.
+    toWrite.to_csv(saveFileName, mode='a', header=False, index=False)
 
 def main(snid, snr=2):
     """
@@ -342,7 +368,7 @@ def main(snid, snr=2):
     F475HDU, F475Data, F625HDU, F625Data, snPixels = getData(snid)
 
     #get SDSS color for referance quality
-    sdssG, sdssR, sdssColor, sdssColorUncert = getSDSSColor(snid)
+    sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, sdssColorUncert = getSDSSColor(snid)
 
     #Calculate SNR
     #set defualts to be sdss, will be overwritten if hst is better
@@ -380,15 +406,18 @@ def main(snid, snr=2):
 
 
     #Save results, Outlined in 2016-08-19 lab notebook.
+    saveData(snid, sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, 
+             sdssColorUncert, size, F475Mag, F475SNR, F625Mag, F625SNR, 
+             hstColor, hstColorUncert, use, color, colorUncert)
     # saveData(snid, F475SNR, F475Source, F475Mag, F625SNR, F625Source, F625Mag,
              # color, sdssG, sdssR, sdssColor, sdssColorUncert, use, size)
-    print(snid, sdssColor, sdssColorUncert, size, hstColor, hstColorUncert, use, color, colorUncert)
+    # print(snid, sdssColor, sdssColorUncert, size, hstColor, hstColorUncert, use, color, colorUncert)
     
 if __name__ == '__main__':
     # main(20874)
-    main(1415)
+    # main(1415)
     # main(14279, 5.0)
 
-    # names = np.array(ancillary.get_sn_names(), dtype=int)
-    # snr = np.ones(names.shape)*18.0
-    # list(map(main, names, snr))
+    names = np.array(ancillary.get_sn_names(), dtype=int)
+    snr = np.ones(names.shape)*18.0
+    list(map(main, names, snr))
