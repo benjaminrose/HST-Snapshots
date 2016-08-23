@@ -339,7 +339,7 @@ def main(snid, snr=2):
     """
 
     #Get Data
-    F475HDU, F475Data, redHDU, redData, snPixels = getData(snid)
+    F475HDU, F475Data, F625HDU, F625Data, snPixels = getData(snid)
 
     #get SDSS color for referance quality
     sdssG, sdssR, sdssColor, sdssColorUncert = getSDSSColor(snid)
@@ -348,15 +348,15 @@ def main(snid, snr=2):
     #set defualts to be sdss, will be overwritten if hst is better
     use = 'sdss'
     color, colorUncert = sdssColor, sdssColorUncert
-    F475Mag, redMag, hstColor, hstColorUncert = np.nan, np.nan, np.nan, np.nan
+    F475Mag, F625Mag, hstColor, hstColorUncert = np.nan, np.nan, np.nan, np.nan
     #size is a 2*n+1 or 9 per side for n=4. 
     #n=4 overscales hst (0.05 arcsec/pixel) more than sdss (0.4 arcsec/pixel)
     #perfect scaling is 8. 
     #Don't search for HST scaled by 4, that is not going to be better then SDSS
     
     for size in np.arange(4):
-        (F475SNR, F475Source, redSNR, 
-            redSource) = calculateSNR(F475HDU, F475Data, redHDU, redData, 
+        (F475SNR, F475Source, F625SNR, 
+            F625Source) = calculateSNR(F475HDU, F475Data, F625HDU, F625Data, 
                                       snPixels, size)
         #flag what color to use, exit if quality if better
         #todo(thie needs to be a higher quality standard. becuase we should bin
@@ -367,20 +367,20 @@ def main(snid, snr=2):
         #1.08 is the difference between mag and fractional uncertanties.
         if 1.08/F475SNR < 0.1:
             #Calculate HST Color
-            F475Mag, redMag, hstColor = calcuateColor(F475Source, redSource, 
+            F475Mag, F625Mag, hstColor = calcuateColor(F475Source, F625Source, 
                                                       size)
             # I should do this, http://spiff.rit.edu/classes/phys445/lectures/signal/signal_illus.html
             # it says that "the uncertainty in magnitudes will be 1.08 times the
             # fractional uncertainty in brightness" with the fractional = 1/SNR.
             #1.08 is the difference between mag and fractional uncertanties.
-            hstColorUncert = np.sqrt((1.08/F475SNR)**2 + (1.08/redSNR)**2)
+            hstColorUncert = np.sqrt((1.08/F475SNR)**2 + (1.08/F625SNR)**2)
             use = 'hst'
             color, colorUncert = hstColor, hstColorUncert
             break
 
 
     #Save results, Outlined in 2016-08-19 lab notebook.
-    # saveData(snid, F475SNR, F475Source, F475Mag, redSNR, redSource, redMag,
+    # saveData(snid, F475SNR, F475Source, F475Mag, F625SNR, F625Source, F625Mag,
              # color, sdssG, sdssR, sdssColor, sdssColorUncert, use, size)
     print(snid, sdssColor, sdssColorUncert, size, hstColor, hstColorUncert, use, color, colorUncert)
     
