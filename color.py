@@ -31,19 +31,19 @@ def getData(snid):
         ok.)
 
     # Returns
-    blueHDU : astropy.io.fits.HDUList
+    F475HDU : astropy.io.fits.HDUList
         The resulting `HDUList` (for the bluer, F475W, filter) returned from the
         import feature of `astropy`.
 
-    blueData : ndarray
+    F475Data : ndarray
         The science data of the bluer, F475W, filter. From 
         `blueHDU[extention].data`.
 
-    redHDU : astropy.io.fits.HDUList
+    F625HDU : astropy.io.fits.HDUList
         The resulting `HDUList` (for the redder, F625W, filter) returned from 
         the import feature of `astropy`.
 
-    redData : ndarray
+    F625Data : ndarray
         The science data of the redder, F625W, filter. From 
         `redHDU[extention].data`.
 
@@ -56,20 +56,20 @@ def getData(snid):
     #F625W is like sdss-r (the red-er filter)
 
     # get data's location on disk
-    blueLocation = 'data/HST - renamed/SN{}_F475W_drz.fits'.format(snid)
-    redLocation = 'data/HST - renamed/SN{}_F625W_drz.fits'.format(snid)
+    F475Location = 'data/HST - renamed/SN{}_F475W_drz.fits'.format(snid)
+    F625Location = 'data/HST - renamed/SN{}_F625W_drz.fits'.format(snid)
 
     # get blue hdu and data
-    blueHDU, blueData = ancillary.import_fits(blueLocation, 1)
+    F475HDU, F475Data = ancillary.import_fits(F475Location, 1)
 
     # get red hdu and data
-    redHDU, redData = ancillary.import_fits(redLocation, 1)
+    F625HDU, F625Data = ancillary.import_fits(F625Location, 1)
 
     # get sn location on the sky
     position = fractionalRank.get_SN_HST_coord(snid)
 
     # get sn location in pixles
-    w = WCS(blueHDU[1].header)
+    w = WCS(F475HDU[1].header)
     yPixel, xPixel = w.all_world2pix(position.ra.to(u.deg).value, 
                                position.dec.to(u.deg).value, 0)
     #all_world2pix is stupid with just one item to search for. I want a tuple of
@@ -81,30 +81,30 @@ def getData(snid):
     #python2 round produces float, python3 produces int. I like python3!
     #somehow in python3 we need to use numpy's version of round.
 
-    return blueHDU, blueData, redHDU, redData, snPixels
+    return F475HDU, F475Data, F625HDU, F625Data, snPixels
 
-def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels, size=0):
+def calculateSNR(F475HDU, F475Data, F625HDU, F625Data, snPixels, size=0):
     """
     Does the signal and noise calculations to simply run 
     [`astropy.stas.signal_to_noise_oir_ccd`](http://docs.astropy.org/en/stable/api/astropy.stats.signal_to_noise_oir_ccd.html).
     Returns the SNR and the signal for both the blue and red filters.
     
     # Parameters
-    blueHDU : astropy.io.fits.HDUList
+    F475HDU : astropy.io.fits.HDUList
         The resulting `HDUList` (for the bluer, F475W, filter) returned from the
         import feature of `astropy`.
 
-    blueData : ndarray
+    F475Data : ndarray
         The science data of the bluer, F475W, filter. From 
-        `blueHDU[extention].data`. Should be in [electrons/s].
+        `F475HDU[extention].data`. Should be in [electrons/s].
 
-    redHDU : astropy.io.fits.HDUList
+    F625HDU : astropy.io.fits.HDUList
         The resulting `HDUList` (for the redder, F625W, filter) returned from 
         the import feature of `astropy`.
 
-    redData : ndarray
+    F625Data : ndarray
         The science data of the redder, F625W, filter. From 
-        `redHDU[extention].data`. Should be in [electrons/s].
+        `F625HDU[extention].data`. Should be in [electrons/s].
 
     snPixels : tuple, two ints
         The result of `all_world2pix` on the `WCS` of the `HDU` objects. A 
@@ -119,17 +119,17 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels, size=0):
         = 2`, a 5x5 square is used.
 
     # Returns
-    blueSNR : float
-        The result of `signal_to_noise_oir_ccd` for `blueData` at `snPixles`.
+    F475SNR : float
+        The result of `signal_to_noise_oir_ccd` for `F475HDU` at `snPixles`.
 
-    blueSource : float
-        The value of `blueData` at `snPixles`. Should be in [electrons/s].
+    F475Source : float
+        The value of `F475HDU` at `snPixles`. Should be in [electrons/s].
 
-    redSNR : float
-        The result of `signal_to_noise_oir_ccd` for `redData` at `snPixles`.
+    F625SNR : float
+        The result of `signal_to_noise_oir_ccd` for `F625Data` at `snPixles`.
 
-    redSource : float
-        The value of `redData` at `snPixles`. Should be in [electrons/s].
+    F625ource : float
+        The value of `F625Data` at `snPixles`. Should be in [electrons/s].
     """
     #Calcualte varriables
     #same for all
@@ -141,31 +141,31 @@ def calculateSNR(blueHDU, blueData, redHDU, redData, snPixels, size=0):
     npix = (2.0*size + 1.0)**2
 
     #blue variables
-    blueT = blueHDU[0].header['EXPTIME']        #s
-    blueSource = blueData[snPixels[0]-size:snPixels[0]+size+1,
+    F475T = F475HDU[0].header['EXPTIME']        #s
+    F475Source = F475Data[snPixels[0]-size:snPixels[0]+size+1,
                           snPixels[1]-size:snPixels[1]+size+1].sum()
-    blueBkg = sep.Background(blueData)
+    F475Bkg = sep.Background(F475Data)
     #sky needs to be for one pixel signal_to_noise_oir_ccd multiplies by npix
-    blueSky  = blueBkg.back()[snPixels[0]-size:snPixels[0]+size+1,
+    F475Sky  = F475Bkg.back()[snPixels[0]-size:snPixels[0]+size+1,
                               snPixels[1]-size:snPixels[1]+size+1].mean()
 
     #red variables
-    redT = redHDU[0].header['EXPTIME']        #s
-    redSource = redData[snPixels[0]-size:snPixels[0]+size+1,
+    F625T = F625HDU[0].header['EXPTIME']        #s
+    F625Source = F625Data[snPixels[0]-size:snPixels[0]+size+1,
                         snPixels[1]-size:snPixels[1]+size+1].sum()
-    redBkg = sep.Background(redData)
+    F625Bkg = sep.Background(F625Data)
     #sky needs to be for one pixel signal_to_noise_oir_ccd multiplies by npix
-    redSky  = redBkg.back()[snPixels[0]-size:snPixels[0]+size+1,
+    F625Sky  = F625Bkg.back()[snPixels[0]-size:snPixels[0]+size+1,
                             snPixels[1]-size:snPixels[1]+size+1].mean()
-    # redSky  = redBkg.back()[snPixels]                            
+    # F625Sky  = F625Bkg.back()[snPixels]                            
 
     #use astropy stats to calculate snr                                    
-    blueSNR = astropy.stats.signal_to_noise_oir_ccd(blueT, blueSource, blueSky, 
+    F475SNR = astropy.stats.signal_to_noise_oir_ccd(F475T, F475Source, F475Sky, 
                                                     dark_eps, rd, npix)
-    redSNR = astropy.stats.signal_to_noise_oir_ccd(redT, redSource, redSky, 
+    F625SNR = astropy.stats.signal_to_noise_oir_ccd(F625T, F625Source, F625Sky, 
                                                    dark_eps, rd, npix)
 
-    return blueSNR, blueSource, redSNR, redSource
+    return F475SNR, F475Source, F625SNR, redSource
 
 def calcuateColor(blueCountRate, redCountRate, scale):
     """
@@ -364,14 +364,16 @@ def main(snid, snr=2):
         # sdss. Since this will be essesically THE error for the hst data.)
         #todo(or we can have the error just be better then the SDSS error?)
         #todo(do not let negative SNR rates through.)
-        if 1/F475SNR < 0.1:
+        #1.08 is the difference between mag and fractional uncertanties.
+        if 1.08/F475SNR < 0.1:
             #Calculate HST Color
             F475Mag, redMag, hstColor = calcuateColor(F475Source, redSource, 
                                                       size)
             # I should do this, http://spiff.rit.edu/classes/phys445/lectures/signal/signal_illus.html
             # it says that "the uncertainty in magnitudes will be 1.08 times the
             # fractional uncertainty in brightness" with the fractional = 1/SNR.
-            hstColorUncert = np.sqrt(1/F475SNR**2 + 1/redSNR**2)
+            #1.08 is the difference between mag and fractional uncertanties.
+            hstColorUncert = np.sqrt((1.08/F475SNR)**2 + (1.08/redSNR)**2)
             use = 'hst'
             color, colorUncert = hstColor, hstColorUncert
             break
