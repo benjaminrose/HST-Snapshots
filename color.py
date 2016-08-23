@@ -165,24 +165,24 @@ def calculateSNR(F475HDU, F475Data, F625HDU, F625Data, snPixels, size=0):
     F625SNR = astropy.stats.signal_to_noise_oir_ccd(F625T, F625Source, F625Sky, 
                                                    dark_eps, rd, npix)
 
-    return F475SNR, F475Source, F625SNR, redSource
+    return F475SNR, F475Source, F625SNR, F625Source
 
-def calcuateColor(blueCountRate, redCountRate, scale):
+def calcuateColor(F475CountRate, F625CountRate, scale):
     """
     Calcuates the color for two count rate objects. Takes blue-red or more
     exactly: $2.5 \times \log{\frac{red}{blue}}$. This is from the definition of
     [magnitude](https://en.wikipedia.org/wiki/Magnitude_%28astronomy%29).
 
     # Parameters
-    blueCountRate : float
+    F475CountRate : float
         The value, from the science data, at the location where the color
         caluation is desired. Should be in [electrons/s]. This is assumed to be
-        the F475W HST filter.
+        the F475W HST filter, and the bluer of the two inputs.
 
-    redCountRate : float
+    F625CountRate : float
         The value, from the science data, at the location where the color
         caluation is desired. Should be in [electrons/s]. This is assumed to be
-        the F625W HST filter.
+        the F625W HST filterand the reder of the two inputs.
 
     # Returns
     color : float
@@ -206,16 +206,16 @@ def calcuateColor(blueCountRate, redCountRate, scale):
 
     #Calcualate AB mag
     #get initial converstion 
-    blueMag = -2.5*np.log10(blueCountRate) + ABMagZpt475W
-    redMag = -2.5*np.log10(redCountRate) + ABMagZpt625W
+    F475Mag = -2.5*np.log10(F475CountRate) + ABMagZpt475W
+    F625Mag = -2.5*np.log10(F625CountRate) + ABMagZpt625W
     #account for resoved source needing to be mag/sqr-arcsec
     pixelScale = 0.05     #arcsec/pixel
     scaling = scale/pixelScale**2
-    blueMag = blueMag - 2.5*np.log10(scaling)
-    redMag = redMag - 2.5*np.log10(scaling)
+    F475Mag = F475Mag - 2.5*np.log10(scaling)
+    F625Mag = F625Mag - 2.5*np.log10(scaling)
 
     #calculate color
-    color = blueMag - redMag
+    color = F475Mag - F625Mag
 
     #######
     #Not needed, alternative calcuation methods
@@ -230,7 +230,7 @@ def calcuateColor(blueCountRate, redCountRate, scale):
     #######
 
     #calucate uncertatinty
-    return blueMag, redMag, color
+    return F475Mag, F625Mag, color
 
 def getSDSSColor(snID):
     """
