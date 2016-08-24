@@ -133,13 +133,15 @@ def calculateSNR(F475HDU, F475Data, F625HDU, F625Data, snPixels, size=0):
     F625ource : float
         The value of `F625Data` at `snPixles`. Should be in [electrons/s].
     """
-    #Calcualte varriables
-    #same for all
-    #from [Wide Field Camera 3 Instrument Handbook for Cycle 24]
-    #(http://www.stsci.edu/hst/wfc3/documents/handbooks/currentIHB/wfc3_ihb.pdf)
-    #todo(update to ACS/WFC)
-    dark_eps = 0.001944444    #e-/s
-    rd = 3.1                  #e-
+    #Calcualte varriables same for all filters
+    
+    #http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/acs_Ch44.html
+    # 20 to 25 e−/pixel/hour was measured
+    #23 e-/hr = .006388889 e- / s
+    dark_eps = 0.006388889   #e-/s
+    #http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/acs_Ch42.html
+    #data was taken before 20 January 2013
+    rd = 4.04                  #e-
     npix = (2.0*size + 1.0)**2
 
     #blue variables
