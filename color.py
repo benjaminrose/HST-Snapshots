@@ -211,15 +211,15 @@ def calcuateColor(F475CountRate, F625CountRate, scale):
     F475Mag = -2.5*np.log10(F475CountRate) + ABMagZpt475W
     F625Mag = -2.5*np.log10(F625CountRate) + ABMagZpt625W
     #account for resoved source needing to be mag/sqr-arcsec & scaling number of pixels
-    pixelScale = 0.05               #arcsec/pixel
+    pixelScale = 0.05                #arcsec/pixel
     npix = (2.0*scale + 1.0)**2      #pixels**2
-    area = npix/pixelScale**2    #arcsec**2
+    area = npix/pixelScale**2        #arcsec**2
     F475Mag = F475Mag - 2.5*np.log10(area)
     F625Mag = F625Mag - 2.5*np.log10(area)
 
     #calculate color
     color = F475Mag - F625Mag
-    
+
     #######
     #Not needed, alternative calcuation methods
     #for SN1415, these calcuate the same thing. 
@@ -289,7 +289,7 @@ def saveData(*args):
     ```
     #The SNR and color analysis of local environment around SDSS SNIa viewed by HST                 
     #snid, sdss g mag, sdss g uncert, sdss r mag, sdss r uncert, sdss color, sdss c olor uncert,   hst size, F475W mag, F475W SNR, F625W mag, F625W SNR, hst color, hst color uncert, use, color, color uncert
-    #    ,      [mag],         [mag],      [mag],         [mag],      [mag],              [mag], [1,2 or 3],     [mag],          ,     [mag],          ,     [mag],            [mag],    , [mag],        [mag]
+    #    ,      [mag],         [mag],      [mag],         [mag],      [mag],              [mag], [0 1 2 or 3],     [mag],          ,     [mag],          ,     [mag],            [mag],    , [mag],        [mag]
     ```
 
     Explantions and details of these parameters can be seen below.
@@ -381,22 +381,23 @@ def main(snid, snr=2):
     use = 'sdss'
     color, colorUncert = sdssColor, sdssColorUncert
     F475Mag, F625Mag, hstColor, hstColorUncert = np.nan, np.nan, np.nan, np.nan
-    #size is a 2*n+1 or 9 per side for n=4. 
+    #size is a 2*n+1 or 9x9 for n=4. 
     #n=4 overscales hst (0.05 arcsec/pixel) more than sdss (0.4 arcsec/pixel)
-    #perfect scaling is 8. 
+    #perfect scaling is 8x8. 
     #Don't search for HST scaled by 4, that is not going to be better then SDSS
     
     for size in np.arange(4):
         (F475SNR, F475Source, F625SNR, 
             F625Source) = calculateSNR(F475HDU, F475Data, F625HDU, F625Data, 
                                       snPixels, size)
+        if F475Source < 0 or F625Source <0:
+            #continue if source is negative in either filter
+            continue
         #flag what color to use, exit if quality if better
-        #todo(thie needs to be a higher quality standard. becuase we should bin
-        # a bit if we can get a better SNR. We should be closer to the midean of
-        # sdss. Since this will be essesically THE error for the hst data.)
         #todo(or we can have the error just be better then the SDSS error?)
         #todo(do not let negative SNR rates through.)
         #1.08 is the difference between mag and fractional uncertanties.
+        #note that F475W seems to always have the lowest SNR, just cause?
         if 1.08/F475SNR < 0.1 and F475SNR > 0:
             #Calculate HST Color
             F475Mag, F625Mag, hstColor = calcuateColor(F475Source, F625Source, 
