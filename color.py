@@ -291,7 +291,6 @@ def getSDSSColor(snID):
     rIndex = gIndex + 1
     
     #calcualte color
-    #todo(accoutn for units of asinh-mag/square-arcsec)
     # S = m +2.5log(Area), m = S - 2.5log(Area)
     gSB, rSB = float(split[gIndex][0]), float(split[rIndex][0])
     if gSB < 0 or rSB < 0:
@@ -299,7 +298,6 @@ def getSDSSColor(snID):
         warnings.warn(r'SN{} has a negative flux: g = {} μJy/sqr-arcsec, r = {} μJy/sqr-arcsec,'.format(snID, gSB, rSB))
         gMag, gMagUncert, rMag, rMagUncert, color, colorUncert = np.nan, np.nan, np.nan, np.nan, np.nan, np.nan 
     else:
-        #todo(do this correct)
         gUncertIndex = gIndex + 8
         rUncertIndex = rIndex + 8
         uncertG = float(split[gUncertIndex][0])
@@ -307,6 +305,7 @@ def getSDSSColor(snID):
         
         gMag = -2.5*np.log10(gSB*1e-6/3631)
         rMag = -2.5*np.log10(rSB*1e-6/3631)
+        # or could be 1.0857*uncertG/gSB
         gMagUncert = uncertG*np.abs(2.5 / (gSB*np.log(10)))
         rMagUncert = uncertR*np.abs(2.5 / (rSB*np.log(10)))
         # print('mag: ', gMag, rMag)
@@ -430,7 +429,6 @@ def main(snid):
             continue
         #flag what color to use, exit if quality if better
         #todo(or we can have the error just be better then the SDSS error?)
-        #todo(do not let negative SNR rates through.)
         #1.08 is the difference between mag and fractional uncertanties.
         #note that F475W seems to always have the lowest SNR, just cause?
         if 1.08/F475SNR < 0.1 and F475SNR > 0:
@@ -441,7 +439,7 @@ def main(snid):
             # it says that "the uncertainty in magnitudes will be 1.08 times the
             # fractional uncertainty in brightness" with the fractional = 1/SNR.
             #1.08 is the difference between mag and fractional uncertanties.
-            hstColorUncert = np.sqrt((1.08/F475SNR)**2 + (1.08/F625SNR)**2)
+            hstColorUncert = np.sqrt((1.0857/F475SNR)**2 + (1.0857/F625SNR)**2)
             use = 'hst'
             color, colorUncert = hstColor, hstColorUncert
             break
@@ -464,5 +462,4 @@ if __name__ == '__main__':
     # main(14279, 5.0)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    snr = np.ones(names.shape)*18.0
-    list(map(main, names, snr))
+    list(map(main, names))
