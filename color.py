@@ -114,7 +114,7 @@ def calculateSNR(F475HDU, F475Data, F625HDU, F625Data, snPixels, size=0):
         `snValue = data[snPixels]`
 
     size : int
-        The number of pixels to around `snPixels` that should be accounted for
+        The number of pixels around `snPixels` that should be accounted for
         in the size of the appeture. By delfault `size = 0`, so only the 
         `snPixel` is used. If `size = 1` then an extra pixel is added in each 
         direction making a 3x3 square with `snPixel` at the center. With `size 
@@ -134,7 +134,7 @@ def calculateSNR(F475HDU, F475Data, F625HDU, F625Data, snPixels, size=0):
         The value of `F625Data` at `snPixles`. Should be in [electrons/s].
     """
     #Calcualte varriables same for all filters
-    
+
     #http://www.stsci.edu/hst/acs/documents/handbooks/currentDHB/acs_Ch44.html
     # 20 to 25 e−/pixel/hour was measured
     #23 e-/hr = .006388889 e- / s
@@ -188,6 +188,11 @@ def calcuateColor(F475CountRate, F625CountRate, scale):
         caluation is desired. Should be in [electrons/s]. This is assumed to be
         the F625W HST filterand the reder of the two inputs.
 
+    scale : int
+        The number of pixels add to a side to increase the aperture If 
+        `scale = 1` then an extra pixel is added in each direction making a 3x3 
+        square aperture With `scale = 2`, a 5x5 square is used.
+
     # Returns
     color : float
         The blue mag minus red mag from the count rates given. In [mag]. From
@@ -239,6 +244,36 @@ def calcuateColor(F475CountRate, F625CountRate, scale):
 
 def getSDSSColor(snID):
     """
+    Calcuate the g-r color and g & r log-mag from the SMP (scene modeling) SDSS
+    data files.
+
+    # Parameters
+    snid : int 
+        The SDSS Transient ID given as an int. (To be honest a string would be 
+        ok.)
+    
+    # Returns
+    gMag : float
+        The log-mag of the g band, from the SMP data files.
+
+    gMagUncert : float
+        The propogated uncertainty of the g band flux, into log-mag, from the 
+        SMP data files.
+
+    rMag : float
+        The log-mag of the r band, from the SMP data files.
+
+    rMagUncert : float
+        The propogated uncertainty of the r band flux, into log-mag, from the 
+        SMP data files.
+
+    color : float
+        g-r color, in magnitudes. Calcuatled as the ratio of the flux in the 
+        SMP data files. 
+
+    colorUncert : float
+        The propogated uncertainty, from flux, through mag. It treats the 
+        uncertainty in mag as a fractional uncertainty
     """
     #get snID in form of sdss data
     sn = str(snID).zfill(6)
@@ -267,7 +302,8 @@ def getSDSSColor(snID):
         #todo(do this correct)
         gUncertIndex = gIndex + 8
         rUncertIndex = rIndex + 8
-        uncertG, uncertR = float(split[gUncertIndex][0]), float(split[rUncertIndex][0])
+        uncertG = float(split[gUncertIndex][0])
+        uncertR = float(split[rUncertIndex][0])
         
         gMag = -2.5*np.log10(gSB*1e-6/3631)
         rMag = -2.5*np.log10(rSB*1e-6/3631)
@@ -285,7 +321,7 @@ def getSDSSColor(snID):
 # def saveData(snid, blueSNR, blueSource, redSNR, redSource, color, sdssColor):
 def saveData(*args):
     """
-    Saves the input data as an appeneded line to `'resources/hst_color.csv'`. 
+    Saves the input data as an appeneded line to `'resources/color_g-r.csv'`. 
     The file needs to exists. Puting header info would be good, such as:
 
     ```
@@ -340,7 +376,7 @@ def saveData(*args):
     """
     #Create saving location
     #`defGalaxy.saveGalaxies()` has a more robust way to doing this.
-    saveFileName = 'resources/hst_color.csv'
+    saveFileName = 'resources/color_g-r.csv'
 
     #combine the data to make it writeable
     #this chould be done with `np.array()` but this also works. 
@@ -361,15 +397,12 @@ def saveData(*args):
     # `binary` might not like strings.
     toWrite.to_csv(saveFileName, mode='a', header=False, index=False, na_rep='nan')
 
-def main(snid, snr=2):
+def main(snid):
     """
     # Parameters
     snid : int
         The SDSS-II Candidate ID number of the object you want to find the 
         host for.
-
-    snr : float
-        The SNR cut off for calcualting the HST color.
     """
 
     #Get Data
