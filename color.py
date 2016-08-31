@@ -455,11 +455,45 @@ def main(snid):
     # print(snid, sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, 
     #          sdssColorUncert, size, F475Mag, F475SNR, F625Mag, F625SNR, 
     #          hstColor, hstColorUncert, use, color, colorUncert)
-    
+
+def colorColorCompare(snid):
+    #copy and paste from `main()`, basically. But with HST ONLY being at its largest.
+    #Get Data
+    F475HDU, F475Data, F625HDU, F625Data, snPixels = getData(snid)
+    #get SDSS color for referance quality
+    sdssG, sdssGUncert, sdssR, sdssRUncert, sdssColor, sdssColorUncert = getSDSSColor(snid)
+
+    #Calculate SNR
+    #size is a 2*n+1 or 9x9 for n=4. 
+    #n=4 overscales hst (0.05 arcsec/pixel) more than sdss (0.4 arcsec/pixel)
+    #perfect scaling is 8x8. 
+    #Don't search for HST scaled by 4, that is not going to be better then SDSS
+    size = 4
+    (F475SNR, F475Source, F625SNR, 
+        F625Source) = calculateSNR(F475HDU, F475Data, F625HDU, F625Data, 
+                                  snPixels, size)
+    #note that F475W seems to always have the lowest SNR, just cause?
+    if F475SNR > 20:     #SNR 20 == mag_error of 0.05, program cuts to HST at SNR 10
+        #Calculate HST Color
+        F475Mag, F625Mag, hstColor = calcuateColor(F475Source, F625Source, 
+                                                  size)
+        # I should do this, http://spiff.rit.edu/classes/phys445/lectures/signal/signal_illus.html
+        # it says that "the uncertainty in magnitudes will be 1.08 times the
+        # fractional uncertainty in brightness" with the fractional = 1/SNR.
+        #1.08 is the difference between mag and fractional uncertanties.
+        hstColorUncert = np.sqrt((1.0857/F475SNR)**2 + (1.0857/F625SNR)**2)
+    else:
+        hstColor, hstColorUncert = np.nan, np.nan
+
+    toWrite = pd.DataFrame([[snid, sdssColor, sdssColorUncert, hstColor, hstColorUncert]])
+    saveFileName = 'resources/color_color_cord.csv'
+    toWrite.to_csv(saveFileName, mode='a', header=False, index=False, na_rep='nan')
+
 if __name__ == '__main__':
     # main(20874)
     # main(14284)
     # main(14279, 5.0)
 
     names = np.array(ancillary.get_sn_names(), dtype=int)
-    list(map(main, names))
+    # list(map(main, names))
+    list(map(colorColorCompare, names))

@@ -144,6 +144,6 @@ def main(flag, show=True, zeros=True):
         plt.savefig('figures/test.pdf')
 
 if __name__ == '__main__':
-    # main('hst', zeros=True)
-    main('hst', zeros=False, show=False)
+    main('hst', zeros=True)
+    # main('hst', zeros=False, show=False)
     # collect_data('hst')
