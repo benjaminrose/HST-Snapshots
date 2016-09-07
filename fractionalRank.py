@@ -3,7 +3,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 3
+    Python 2
     2016-03-07
     Licesed under the MIT License
 """
@@ -323,7 +323,10 @@ def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
             f = interpolate.interp1d([galaxy[rank_min], galaxy[rank_max]]
                                     ,[fpr_min, fpr_max])
             fpr = f(SN)
-    return fpr
+
+    fractionalFlux = galaxy[galaxy<SN].sum()/galaxy.sum()
+
+    return fpr, fractionalFlux
 
 def saveNaN(SNID, key, header):
     save_location = 'resources/SN{0}/'.format(SNID)
@@ -402,11 +405,11 @@ def main(key, SNID = 2635):
     print('getting FPR')
     #test if SN is outside galaxy, or other error
     if inside:
-        fpr = get_FPR(galaxy_pixels, sn_pixel_value)
+        fpr, fractionalFlux = get_FPR(galaxy_pixels, sn_pixel_value)
     else:
         print('SN{} is outside of galaxy'.format(SNID))
-        fpr = 0
-    print(fpr)
+        fpr, fractionalFlux = 0, 0
+    print(fpr, fractionalFlux)
 
     # save data
     save_location = 'resources/SN{0}/'.format(SNID)
@@ -414,6 +417,7 @@ def main(key, SNID = 2635):
     np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), galaxy_pixels, delimiter=',', header="The pixel values of SN{0} host galaxy from {1}. The galaxy's edge is defined hard coded currently".format(SNID, key))
     np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID)+' as seen by '+key)
     np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calculated with '+key)
+    np.savetxt(save_location+'SN{0}_{1}_fractionalFlux.csv'.format(SNID, key), [fractionalFlux], delimiter=',', header='The fractional flux calculated for SN'+str(SNID)+' calculated with '+key)
 
 if __name__ == "__main__":
     # main('hst', SNID = 12781)
@@ -424,8 +428,8 @@ if __name__ == "__main__":
 
     SN = ancillary.get_sn_names()
     SN = np.array(SN, dtype=np.int)
+    flag = ['sdss']*len(SN)
     # flag = ['hst']*len(SN)
-    flag = ['hst']*len(SN)
     map(main, flag, SN)
 
     ###########################################
