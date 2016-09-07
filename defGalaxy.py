@@ -315,7 +315,7 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
     #save resutls to file
     saveGalaxies(sources, host, SNNumber, surfaceBrightness)
 
-def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
+def main_sdss(SNNumber=2635, sigma=2, fltr='g', minarea=5, deblendCont=0.005):
     """
     This is the default method of defining an sdss galaxy
 
@@ -334,6 +334,10 @@ def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
 
     deblendCont : float
         One of the deblending parrameters. Passed directly to `sep`'s `deblend_cont`. The default is the same as `sep`.
+
+    sigma : float
+        The value mutiplied to the global background RMS to calcuate the 
+        threshold for galaxy edge.
     """
     #break out if I don't have these sdss files
     if SNNumber in [12928, 15171, 19023]:
@@ -347,7 +351,6 @@ def main_sdss(SNNumber = 2635, fltr='g', minarea=5, deblendCont=0.005):
     hdu, data = ancillary.import_fits(imageFile, extention=0)
 
     # find threshold
-    sigma = 2
     bkg = sep.Background(data)
     thresh = sigma*bkg.globalrms
     #run sep
@@ -442,5 +445,6 @@ if __name__ == "__main__":
     # map(main, names)
 
     # main_sdss(14284)
-    map(main_hst, names)
-    map(main_sdss, names)
+    # map(main_hst, names)
+    sigma = [3]*len(names)
+    map(main_sdss, names, sigma)
