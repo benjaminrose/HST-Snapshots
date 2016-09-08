@@ -104,7 +104,7 @@ def get_SN_HST_coord(SNID):
         print('SNPosition: ', SNPosition.to_string(style=u'hmsdms'))
     return SNPosition
 
-def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
+def get_galaxy_pixels(SNID, hdu, sciData=None, key='', cutoff=0):
     """
     Returns the numerical value of the pixels for the host galaxy of `SNID`.
     Uses the 26 mag/sqr-arcsec limit for a `key` of `hst` and `2-sigma` for a
@@ -142,14 +142,10 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
 
     # get galaxy definition & format its astorpy.table object
     # galaxyData = Table.read('resources/2635-galaxy.csv', format='ascii.commented_header', header_start=1)    #hardcoded for testing
-    if key == 'hst':
-        galaxyData = Table.read('resources/hst_hosts_26.csv', format='ascii.commented_header', header_start=2)
-    elif key == 'sdss':
-        galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.commented_header', header_start=2)   
-        # no idea which is better between these two.
-        # galaxyData = Table.read('resources/sdss_hosts_2.csv', format='ascii.csv', header_start=2)
-    else:
-        raise ValueError('{} is an unknown source flag. Use "hst" or "sdss" to represent the galaxy source you want to use to calcualte the fpr.'.format(key))
+    try:
+        galaxyData = Table.read('resources/{0}_hosts_{1}.csv'.format(key, cutoff), format='ascii.commented_header', header_start=2)
+    except FileNotFoundError as e:
+        raise FileNotFoundError(e+' change key ({0}) or cutoff ({1}) to find the correct file.'.format(key, cutoff))
     # table headers are: SN ID, npix, x, y, a, b, theta
     # add apropriate units to the table.
     galaxyData['theta'].unit = u.radian  
@@ -177,7 +173,7 @@ def get_galaxy_pixels(SNID, hdu, sciData=None, key=''):
 
     return ranked, mask
 
-def get_sn_value(position, hdu, sciData=None, key='', mask=None):
+def get_sn_value(position, hdu, sciData=None, mask=None, key='', cutoff=0):
     """
     Returns the numerical value of the pixels for the SN
 
@@ -194,13 +190,17 @@ def get_sn_value(position, hdu, sciData=None, key='', mask=None):
         not given then it will be extracted. Provide pre-extracted data if any 
         manipulation is needed prior to analaysis, ie byteswap.
 
+    mask : np.array (boolian)
+        the reulst of `sep.mask_ellipse`. States if a pixel is inside an
+        ellipse (defined by the galaxy) or not.
+
     key : string
         use the strings `'hst'` or `'sdss'` to designate what galaxy source you
         want to use to calcualte the fpr.
 
-    mask : np.array (boolian)
-        the reulst of `sep.mask_ellipse`. States if a pixel is inside an
-        ellipse (defined by the galaxy) or not.
+    cutoff : float
+        This matches the cutoff value for the galaxy definition. Likely 26 for 
+        `'hst'`, and either 1, 2, or 3 for `'sdss'`. 
 
     # Returns
     sn : float
@@ -328,13 +328,13 @@ def get_FPR(galaxy, SN):#, positions, sigma=2, box_size=3):
 
     return fpr, fractionalFlux
 
-def saveNaN(SNID, key, header):
+def saveNaN(SNID, key, cutoff, header):
     save_location = 'resources/SN{0}/'.format(SNID)
-    np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
-    np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
-    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [np.nan], delimiter=',', header=header)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_host_pixel_values.csv'.format(SNID, key, cutoff), [np.nan], delimiter=',', header=header)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_pixel_values.csv'.format(SNID, key, cutoff), [np.nan], delimiter=',', header=header)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_fpr.csv'.format(SNID, key, cutoff), [np.nan], delimiter=',', header=header)
 
-def main(key, SNID = 2635):
+def main(key, SNID, cutoff):
     """
     This is the default method for calculucating fractional pixel rank for a
     single SN and it's SDSS host. This is set up so `map()` can be used to
@@ -348,6 +348,10 @@ def main(key, SNID = 2635):
     SNID : int
         The numerical SDSS ID for the SN.
 
+    cutoff : float
+        This matches the cutoff value for the galaxy definition. Likely 26 for 
+        `'hst'`, and either 1, 2, or 3 for `'sdss'`.
+
     # Notes
     This method saves three files to `'resources/SN{0}/'.format(SNID)`. They 
     are `SN*_{key}_host_pixel_values.csv`, `SN*_{key}_pixel_values.csv`, and
@@ -359,7 +363,7 @@ def main(key, SNID = 2635):
         header = 'SN{0} has an object obstructing its host galaxy'.format(SNID)
         # display warning that there is an issue. 
         warnings.warn(header)
-        saveNaN(SNID, key, header)
+        saveNaN(SNID, key, cutoff, header)
         return None
     if key == 'hst':
         # get SN position
@@ -374,7 +378,7 @@ def main(key, SNID = 2635):
         # skip over sdss images I do not have
         if SNID in [12928, 15171, 19023]:
             header = "SN{0} does not have an sdss coadd image.".format(SNID)
-            saveNaN(SNID, key, header)
+            saveNaN(SNID, key, cutoff, header)
             return None
 
         # get SN position
@@ -394,11 +398,11 @@ def main(key, SNID = 2635):
 
     # get pixel values of galaxy and SN
     print('getting galaxy pixels values')
-    galaxy_pixels, mask = get_galaxy_pixels(SNID, hdu, scidata, key=key)
+    galaxy_pixels, mask = get_galaxy_pixels(SNID, hdu, scidata, key, cutoff)
     print(galaxy_pixels)
     print('getting SN pixel value')
     print('SN location to pixel is wrong')
-    sn_pixel_value, inside = get_sn_value(position, hdu, scidata, key, mask)
+    sn_pixel_value, inside = get_sn_value(position, hdu, scidata, mask, key, cutoff)
     print(sn_pixel_value)
 
     # get Fractional Pixel Rank
@@ -414,10 +418,10 @@ def main(key, SNID = 2635):
     # save data
     save_location = 'resources/SN{0}/'.format(SNID)
     #todo(make it so a new folder can be made if need be.)
-    np.savetxt(save_location+'SN{0}_{1}_host_pixel_values.csv'.format(SNID, key), galaxy_pixels, delimiter=',', header="The pixel values of SN{0} host galaxy from {1}. The galaxy's edge is defined hard coded currently".format(SNID, key))
-    np.savetxt(save_location+'SN{0}_{1}_pixel_values.csv'.format(SNID, key), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID)+' as seen by '+key)
-    np.savetxt(save_location+'SN{0}_{1}_fpr.csv'.format(SNID, key), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calculated with '+key)
-    np.savetxt(save_location+'SN{0}_{1}_fractionalFlux.csv'.format(SNID, key), [fractionalFlux], delimiter=',', header='The fractional flux calculated for SN'+str(SNID)+' calculated with '+key)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_host_pixel_values.csv'.format(SNID, key, cutoff), galaxy_pixels, delimiter=',', header="The pixel values of SN{0} host galaxy from {1}. The galaxy's edge is defined hard coded currently".format(SNID, key))
+    np.savetxt(save_location+'SN{0}_{1}_{2}_pixel_values.csv'.format(SNID, key, cutoff), [sn_pixel_value], delimiter=',', header='The pixel value of SN'+str(SNID)+' as seen by '+key)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_fpr.csv'.format(SNID, key, cutoff), [fpr], delimiter=',', header='The fractional pixel rank calculated for SN'+str(SNID)+' calculated with '+key)
+    np.savetxt(save_location+'SN{0}_{1}_{2}_fractionalFlux.csv'.format(SNID, key, cutoff), [fractionalFlux], delimiter=',', header='The fractional flux calculated for SN'+str(SNID)+' calculated with '+key)
 
 if __name__ == "__main__":
     # main('hst', SNID = 12781)
@@ -428,9 +432,10 @@ if __name__ == "__main__":
 
     SN = ancillary.get_sn_names()
     SN = np.array(SN, dtype=np.int)
-    flag = ['sdss']*len(SN)
-    # flag = ['hst']*len(SN)
-    map(main, flag, SN)
+    for i in [('hst', 26), ('sdss', 1), ('sdss', 2), ('sdss', 3)]:
+        flag = [i[0]]*len(SN)
+        cutoff = [i[1]]*len(SN)
+        map(main, flag, SN, cutoff)
 
     ###########################################
     ## Testing if pixel value is correct for SN

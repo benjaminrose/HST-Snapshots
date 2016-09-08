@@ -1,4 +1,4 @@
-""" plotColor.py -- creats plots 
+""" plotColor.py -- creats plots
 
     Benjamin Rose
     benjamin.rose@me.com
@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import seaborn
 
 from scipy.optimize import curve_fit
+
 
 def plotCDF(save=False):
     """
@@ -38,7 +39,7 @@ def plotCDF(save=False):
     ax.plot(color_hst, cdf_hst, label='hst')
     ax.plot(color_sdss, cdf_sdss, label='sdss')
     ax.plot(color_best, cdf_best, label='best')
-    plt.ylabel('Cumulative Probability') 
+    plt.ylabel('Cumulative Probability')
     plt.xlabel('color [g-r, or equivelent]')
     plt.legend(loc=0)
     # plt.xlim(0.1, 1.6)
@@ -46,7 +47,7 @@ def plotCDF(save=False):
     # plt.title('Same size "pixels", SNR > 20')
 
     if save:
-        # plt.savefig('figures/2016-08-31-color.pdf')   
+        # plt.savefig('figures/2016-08-31-color.pdf')
         plt.savefig('figures/temp.pdf')
     else:
         plt.show()
@@ -63,7 +64,7 @@ def plotComparison(save=False):
         parvals = params.valuesdict()
         m = parvals['slope']
         b = parvals['intercept']
-        
+
         model = m*x + b
         return (model-y)/yUncert
 
@@ -71,12 +72,12 @@ def plotComparison(save=False):
     ax = fig.add_subplot(111)
     # ax.axis('equal')
     # ax.scatter(data['sdss color'], data['hst color'])
-    # ax.errorbar(data['sdss color'], data['hst color'], 
+    # ax.errorbar(data['sdss color'], data['hst color'],
                 # xerr=data['sdss color uncert'], yerr=data['hst color uncert'])
-    ax.errorbar(data['hst color'], data['sdss color'], 
-                xerr=data['hst color uncert'].values, 
+    ax.errorbar(data['hst color'], data['sdss color'],
+                xerr=data['hst color uncert'].values,
                 yerr=data['sdss color uncert'].values, marker='*')
-    plt.xlabel('SDSS g-r [mag]') 
+    plt.xlabel('SDSS g-r [mag]')
     plt.ylabel('HST F475W-F625W [mag]')
     # plt.legend(loc=0)
     # plt.xlim(0.1, 1.6)
@@ -84,15 +85,15 @@ def plotComparison(save=False):
     plt.title('Same size "pixels", SNR > 20')
 
     if save:
-        # plt.savefig('figures/2016-08-31-color.pdf')   
+        # plt.savefig('figures/2016-08-31-color.pdf')
         plt.savefig('figures/temp.pdf')
     else:
         plt.show()
 
-    
+
 
 if __name__ == '__main__':
-    plotComparison(save=True)
+    plotComparison()
 
 
 '''
