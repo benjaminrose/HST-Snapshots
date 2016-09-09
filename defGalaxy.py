@@ -19,6 +19,7 @@ import sep
 
 from astropy.convolution import Gaussian2DKernel, convolve
 from astropy.coordinates import SkyCoord
+from astropy.nddata.utils import block_reduce
 from astropy import units as u
 from astropy import wcs #for WCS, and util
 from astropy.io import fits     #to read fits files
@@ -178,7 +179,7 @@ def find_sdss_host(sources, SNID, hdu):
     host = find_host(sources, SNPixels, radius)
     return host
 
-def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
+def saveGalaxies(sources, host, SNNumber, sb, telescope='hst', block_size=1):
     """
     This saves the results of this script using a sytematic convention
     
@@ -202,12 +203,20 @@ def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
         String that represents the telescope that these hosts were observed
         on. This allows source definintion to be from multiple observations
         without things getting over written.
+
+    block_size : int
+        The integer block size. Used to downsample a data array by applying a 
+        function to local blocks. Defaults to `1` and is therefore not apart of the output file names. 
     """
 
     #Save ALL objects
-    allHeader = 'data from sep on SN{} as observed by '.format(SNNumber) + telescope + ' with a SB cutoff of {0} mag/sqr-arcsec on {1}'.format(sb, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
+    if block_size == 1:
+        allHeader = 'data from sep on SN{} as observed by '.format(SNNumber) + telescope + ' with a SB cutoff of {0} mag/sqr-arcsec on {1}'.format(sb, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
+        allLocationFIle = telescope+'_sources_{}.csv'.format(sb)
+    else:
+        allHeader = 'data from sep on SN{} as observed by '.format(SNNumber) + telescope + ' with a SB cutoff of {0} mag/sqr-arcsec and a block size of {1} on {2}'.format(sb, block_size, datetime.now().date()) + '\n' + str(sources.dtype.names)[1:-1].replace("'","")
+        allLocationFIle = telescope+'_sources_{0}_{1}.csv'.format(sb, block_size)
     allLocationFolder = 'resources/SN{}'.format(SNNumber)
-    allLocationFIle = telescope+'_sources_{}.csv'.format( sb)
     allLocation = allLocationFolder+'/'+allLocationFIle
     if not path.exists(allLocationFolder): makedirs(allLocationFolder)
 
@@ -215,8 +224,11 @@ def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
 
     
     #Save host
-    #todo(don't assume it existes, but rather check.)
-    hostLocation = 'resources/' + telescope + '_hosts_{}.csv'.format(sb)
+    #todo(don't assume this file existes, but rather check.)
+    if block_size == 1:
+        hostLocation = 'resources/' + telescope + '_hosts_{}.csv'.format(sb)
+    else:
+        hostLocation = 'resources/' + telescope + '_hosts_{0}_{1}.csv'.format(sb, block_size)
     #combine `SNNumber` to the front of `host` data, but structured arrays are stupid. So is np.savetxt()
     dataToSave = str(SNNumber)
     for i in host:
@@ -226,7 +238,7 @@ def saveGalaxies(sources, host, SNNumber, sb, telescope='hst'):
     with open(hostLocation, 'a') as f:
         f.write(dataToSave)
 
-def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.1):
+def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, deblendCont=0.1):
     """
     This is the default method of defining an hst galaxy
 
@@ -234,6 +246,10 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
     SNNumber : int
         The sdss identification number of the object you want to find the host 
         for.
+
+    block_size : int
+        The integer block size. Used to downsample a data array by applying a 
+        function to local blocks.
 
     surfaceBrightness : int, float
         the disired cut off in mag/sqr-arcsec
@@ -254,10 +270,11 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
     #smooth image
     stDev = 3
     data = smooth_Image(data, stDev)
+    data = block_reduce(data, block_size)
 
     # find threshold
     #the magniutde per pixel for the same SB, wikipedia for equation
-    magPerPixel = surfaceBrightness - 2.5*np.log10(0.05**2)
+    magPerPixel = surfaceBrightness - 2.5*np.log10((0.05*block_size)**2)
     #convert to AB-mag to flux
     #more at http://www.stsci.edu/hst/acs/analysis/zeropoints
     fNu = 3.63e-20*(u.erg / u.cm**2 / u.s / u.Hz)     #this is when AB-mag = 0
@@ -286,34 +303,34 @@ def main_hst(SNNumber = 2635, surfaceBrightness = 26, minArea=50, deblendCont=0.
             # host = find_host(sources, SNPixels, radius)
             host = find_host(sources)
         elif SNNumber == 13354:
-            SNPixels = (978, 1043)
+            SNPixels = (978/block_size, 1043/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 13411:
-            SNPixels = (1010, 1067)
+            SNPixels = (1010/block_size, 1067/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 14113:
-            SNPixels = (1041, 1049)
+            SNPixels = (1041/block_size, 1049/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 14284:
-            SNPixels = (1063, 1056)
+            SNPixels = (1063/block_size, 1056/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 18415:
-            SNPixels = (1095, 1066)
+            SNPixels = (1095/block_size, 1066/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 19282:
-            SNPixels = (1040, 1059)
+            SNPixels = (1040/block_size, 1059/block_size)
             host = find_host(sources, SNPixels, radius)
         elif SNNumber == 13038:
-            SNPixels = (1059, 1033)
+            SNPixels = (1059/block_size, 1033/block_size)
             host = find_host(sources, SNPixels, radius)
         else:
             raise NotImplementedError('Somehow SN{} is designated for HST hardcoding but is not implemented'.format(SNNumber))
     else:
-        host = find_host(sources)
+        host = find_host(sources, (1045.0/block_size, 1054.0/block_size))
     print('host: ', host)
 
     #save resutls to file
-    saveGalaxies(sources, host, SNNumber, surfaceBrightness)
+    saveGalaxies(sources, host, SNNumber, surfaceBrightness, block_size=block_size)
 
 def main_sdss(SNNumber=2635, sigma=2, fltr='g', minarea=5, deblendCont=0.005):
     """
@@ -445,6 +462,7 @@ if __name__ == "__main__":
     # map(main, names)
 
     # main_sdss(14284)
-    # map(main_hst, names)
-    sigma = [3]*len(names)
-    map(main_sdss, names, sigma)
+    block_size = [8]*len(names)
+    map(main_hst, names, block_size)
+    # sigma = [3]*len(names)
+    # map(main_sdss, names, sigma)
