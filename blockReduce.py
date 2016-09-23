@@ -92,10 +92,10 @@ def main(SNNumber):
     print('saved '+name)
 
 
-
-
 if __name__ == '__main__':
+    # main('1415')
+
     #get names
-    # SN = ancillary.get_sn_names()
-    
-    main('1415')
+    SN = ancillary.get_sn_names()
+    SN = np.array(SN, dtype=np.int)
+    list(map(main, SN))
