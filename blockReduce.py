@@ -55,7 +55,7 @@ def main(SNNumber):
     #define pixels to test, not perfect corners, but is devisible by 8!
     pixOrig = np.array([[0, 0], [0, 2072], [1060, 1036], [2120, 0], 
                         [2120, 2072]], np.float_)
-    pix = pixOrig/8
+    pix = pixOrig/block_size
     #get world values
     worldOrig = wOrig.wcs_pix2world(pixOrig, 1)
     world = w.wcs_pix2world(pix, 1)
