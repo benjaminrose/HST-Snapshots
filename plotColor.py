@@ -93,7 +93,8 @@ def plotComparison(save=False):
 
 
 if __name__ == '__main__':
-    plotComparison()
+    # plotComparison()
+    plotCDF()
 
 
 '''
