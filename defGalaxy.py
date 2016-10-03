@@ -4,7 +4,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 3
+    Python 2
     2016-03-03
     Licesed under the MIT License
 """
@@ -19,7 +19,6 @@ import sep
 
 from astropy.convolution import Gaussian2DKernel, convolve
 from astropy.coordinates import SkyCoord
-from astropy.nddata.utils import block_reduce
 from astropy import units as u
 from astropy import wcs #for WCS, and util
 from astropy.io import fits     #to read fits files
@@ -119,9 +118,13 @@ def find_host(sources, initialGuess=(2090/2.0, 2108/2.0), searchRadius=200):
         while len(centerIDs) == 0: 
             #increase from 200 -> 500 for hst or propotinally
             searchRadius *= 2.5
+            print('searchRadius: ', searchRadius)
+            print('initialGuess: ', initialGuess)
             for i, x in enumerate(sources['x']):
                 if ((x-initialGuess[0])**2 + (sources['y'][i]-initialGuess[1])**2) < searchRadius**2:
                     centerIDs.append(i)
+            if searchRadius > 1000:
+                from sys import exit; exit('You fail and got a search radius of {}.'.format(searchRadius))
     
     # Select largest of the center objects, but save the ID
     #this selects the centerID associated with the max (in size) of the central cources
@@ -255,22 +258,25 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
         the disired cut off in mag/sqr-arcsec
 
     minarea : int
-        The minimum area of the source. Passed directly to `sep`.
+        The minimum area of the source. Passed directly to `sep`. Will be devided by block_size**2.
 
     deblendCont : float
         One of the deblending parrameters. Passed directly to `sep`'s `deblend_cont`.
     """
     print("running SN{}".format(SNNumber))
     # imageFile = 'data/HST - combined/SN{}_combined.fits'.format(SNNumber)
-    imageFile = 'data/HST - combined/SN{}_combined_flux.fits'.format(SNNumber)
+    if block_size == 1:
+        imageFile = 'data/HST - combined/SN{}_combined_flux.fits'.format(SNNumber)
+    else:
+        imageFile = 'data/HST - reduced/SN{}_reduced{}.fits'.format(SNNumber, block_size)
 
     #import image data
     data = ancillary.import_fits(imageFile, extention=1)[1]
 
     #smooth image
-    stDev = 3
-    data = smooth_Image(data, stDev)
-    data = block_reduce(data, block_size)
+    if block_size == 1:
+        stDev = 3
+        data = smooth_Image(data, stDev)
 
     # find threshold
     #the magniutde per pixel for the same SB, wikipedia for equation
@@ -286,6 +292,8 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
     fluxThresh = fluxAB * 10**(magPerPixel/-2.5)
 
     #run sep
+    #fix `minArea`
+    minArea = minArea/block_size**2
     sources = run_sep(data, fluxThresh.value, minArea, deblendCont)
     # print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
@@ -296,12 +304,13 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
     if SNNumber in hardcodeFindHost:
         # if SN is hardcoded do the search, but with a very small radius and a guess that is what is determined between the R_25 and R_26 runs that were visually inspected.
         warnings.warn("SN{}'s host is searched via a hard-coded method".format(SNNumber))
-        radius = 20     #pixels
+        radius = 20/block_size     #pixels
         if SNNumber == 8297:
+            #todo(fix this crazyness. Is this needed?)
             # Does not work for R_25, and R_26 is just fine.
             # SNPixels = (1111, 1025)
             # host = find_host(sources, SNPixels, radius)
-            host = find_host(sources)
+            host = find_host(sources, (1045.0/block_size, 1054.0/block_size))
         elif SNNumber == 13354:
             SNPixels = (978/block_size, 1043/block_size)
             host = find_host(sources, SNPixels, radius)
@@ -452,6 +461,7 @@ if __name__ == "__main__":
     # runSEPIndiviually()
     # main_hst(13038)
     # map(main_hst, [13354, 13354], [25, 26])
+    # main_hst(13038, 8)
 
     #test to try and find SN19282 as a 2x2 in sdss
     # main_sdss(19282, minarea=3)
