@@ -14,6 +14,7 @@ from datetime import datetime
 import numpy as np
 from astropy.io import fits
 from astropy import wcs
+#block_reduce needs scikit-image
 from astropy.nddata.utils import block_reduce
 
 import ancillary
@@ -52,7 +53,7 @@ def main(SNNumber):
     ################### check if wcs's are the same
     #get wcs for original data
     wOrig = wcs.WCS(header1)
-    #define pixels to test, not perfect corners, but is devisible by 8!
+    #define pixels to test, not perfect corners, but is divisible by 8!
     pixOrig = np.array([[0, 0], [0, 2072], [1060, 1036], [2120, 0], 
                         [2120, 2072]], np.float_)
     pix = pixOrig/block_size
