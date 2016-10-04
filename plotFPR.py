@@ -47,7 +47,7 @@ def plot_individual(snID = 2635, show=True):
     else:
         plt.savefig('figures/2016-04-16-fpr-2635.pdf')
 
-def collect_data(flag, cutoff):
+def collect_data(flag, cutoff, blockSize=None):
     """
     flag : string
         do you wnat 'hst' or 'sdss'
@@ -56,11 +56,18 @@ def collect_data(flag, cutoff):
         This matches the cutoff value for the galaxy definition. Likely 26 for 
         `'hst'`, and either 1, 2, or 3 for `'sdss'`.
 
+    blockSize : int
+        The integer block size. Used to downsample a data array by applying a 
+        function to local blocks.
+
     # Return
     fpr : np.array
         (x+1,2) array of strings. first column is SN names, second column is fpr. first row is a header statings previous sentance. Lenght is number of SN plus 1 (header row!)
     """
-    location = glob('resources/SN*/SN*_{}_{}_fpr.csv'.format(flag, cutoff))
+    if blockSize is None:
+        location = glob('resources/SN*/SN*_{}_{}_fpr.csv'.format(flag, cutoff))
+    else:
+        location = glob('resources/SN*/SN*_{}_{}_{}_fpr.csv'.format(flag, cutoff, blockSize))
 
     # creating a header makes more sense then `if len(fprs)==0:` in the for-loop.
     fprs = np.array([['#sn', 'fpr']])
@@ -93,6 +100,16 @@ def main(show=True, zeros=False):
     if not zeros:
         fpr_hst = fpr_hst[fpr_hst.nonzero()]
     cdf_hst = np.array(range(fpr_hst.size))/(fpr_hst.size-1)
+
+    #collect hst reduced data to plot
+    hstReduced = collect_data('hst', 26, 8)
+    #read documentation of `collect_data()` to explain slicing.
+    hstReduced = hstReduced[1:]
+    fpr_hstReduced = np.array(hstReduced[:,1], dtype=np.float)
+    fpr_hstReduced.sort()
+    if not zeros:
+        fpr_hstReduced = fpr_hstReduced[fpr_hstReduced.nonzero()]
+    cdf_hstReduced = np.array(range(fpr_hstReduced.size))/(fpr_hstReduced.size-1)
 
     #collect sdss 1-sigma data to plot
     sdss1 = collect_data('sdss', 1)
@@ -157,6 +174,7 @@ def main(show=True, zeros=False):
     plt.plot(fpr_sdss2, cdf_sdss2, label=r'sdss, 2$\sigma$')
     plt.plot(fpr_sdss3, cdf_sdss3, label=r'sdss, 3$\sigma$')
     plt.plot(fpr_hst, cdf_hst, label='hst')
+    plt.plot(fpr_hstReduced, cdf_hstReduced, label='hst reduced')
     plt.plot(fpr_referacne, cdf_referance, label=r'$\propto$ luminosity')
     plt.legend(loc=0)
     plt.xlabel('Fractional Pixel Rank')
