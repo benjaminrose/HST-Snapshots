@@ -310,7 +310,7 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
             # Does not work for R_25, and R_26 is just fine.
             # SNPixels = (1111, 1025)
             # host = find_host(sources, SNPixels, radius)
-            host = find_host(sources, (1045.0/block_size, 1054.0/block_size))
+            host = find_host(sources, (1045.0/block_size, 1054.0/block_size), 200.0/block_size)
         elif SNNumber == 13354:
             SNPixels = (978/block_size, 1043/block_size)
             host = find_host(sources, SNPixels, radius)
@@ -335,7 +335,7 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
         else:
             raise NotImplementedError('Somehow SN{} is designated for HST hardcoding but is not implemented'.format(SNNumber))
     else:
-        host = find_host(sources, (1045.0/block_size, 1054.0/block_size))
+        host = find_host(sources, (1045.0/block_size, 1054.0/block_size), 200.0/block_size)
     print('host: ', host)
 
     #save resutls to file
