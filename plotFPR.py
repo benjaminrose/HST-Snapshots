@@ -188,6 +188,6 @@ def main(show=True, zeros=False):
 
 if __name__ == '__main__':
     # main('hst', zeros=True)
-    main()
+    main(zeros=True)
     # main('hst', zeros=False, show=False)
     # collect_data('hst')
