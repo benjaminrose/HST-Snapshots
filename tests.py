@@ -3,7 +3,7 @@
     Benjamin Rose
     benjamin.rose@me.com
     Universtiy of Notre Dame
-    Python 3
+    Python 2
     2016-03-03
     Licesed under the MIT License
 '''
@@ -25,7 +25,7 @@ import ancillary
 import fractionalRank
 import plotFPR
 
-def correct_galaxy(telescope, cutoff,  n=3):
+def correct_galaxy(telescope, cutoff, blockSize=8, n=3):
     """
     This saves visual images to see if defGalaxy is working.
 
@@ -45,13 +45,15 @@ def correct_galaxy(telescope, cutoff,  n=3):
         galaxies = Table.read('resources/hst_hosts_{}.csv'.format(cutoff), format='ascii.csv', header_start=2)
     elif telescope == 'sdss':
         galaxies = Table.read('resources/sdss_hosts_{}.csv'.format(cutoff), format='ascii.csv', header_start=2)
+    elif telescope == 'hst_reduced':
+        galaxies = Table.read('resources/hst_hosts_{}_{}.csv'.format(cutoff, blockSize), format='ascii.csv', header_start=2)
     else:
-        raise ValueError('{} is unacceptable, use "hst" or "sdss" to represent the correct galaxy definition you want to test.'.format(telescope))
+        raise ValueError('{} is unacceptable, use "hst", "hst_reduced" or "sdss" to represent the correct galaxy definition you want to test.'.format(telescope))
     #todo(make the table work better, it is getting the first column name as '# SN' rather then 'SN')
     galaxies['theta'].unit = u.radian
 
     # Get Positions
-    if telescope == 'hst':
+    if telescope == 'hst' or telescope == 'hst_reduced':
         positions = map(fractionalRank.get_SN_HST_coord, galaxies['# SN'].data)
     elif telescope == 'sdss':
         positions = map(fractionalRank.get_SN_SDSS_coord, galaxies['# SN'].data)
@@ -70,9 +72,11 @@ def correct_galaxy(telescope, cutoff,  n=3):
                 raise Warning('SN{} does not exist for SDSS'.format(sn))
             else:
                 hdu, data = ancillary.import_fits('data/SDSS - coadded/SN{0}-g.fits'.format(sn), extention=0)
+        elif telescope == 'hst_reduced':
+            hdu, data = ancillary.import_fits('data/HST - reduced/SN{0}_reduced{1}.fits'.format(sn, blockSize), extention=1)
 
         # get WCS data & convert SN position to pixel
-        if telescope == 'hst':
+        if telescope == 'hst' or telescope == 'hst_reduced':
             w = WCS(hdu[1].header)
             x_sn, y_sn = w.all_world2pix(position.ra.to(u.deg).value, position.dec.to(u.deg).value, 1) #this should be better, do it all at once?
         elif telescope == 'sdss':
@@ -97,8 +101,12 @@ def correct_galaxy(telescope, cutoff,  n=3):
         ax = fig.add_subplot(111, projection=w)
 
         # plot data
-        if telescope == 'hst':
+        if telescope == 'hst' or telescope == 'hst_reduced':
             plt.imshow(data, origin='lower', cmap='cubehelix', clim=(0, 1))
+            plt.xlabel('RA')
+            plt.ylabel('Dec')
+        if telescope == 'hst_reduced':
+            plt.imshow(data, origin='lower', cmap='cubehelix', clim=(1e-19, 1e-17))
             plt.xlabel('RA')
             plt.ylabel('Dec')
         if telescope == 'sdss':
@@ -240,8 +248,9 @@ def inspectSNOutsideGalaxy(telescope, n=3, cutoff=26):
 
 
 if __name__ == "__main__":
-    correct_galaxy('hst', 26, n=3)
-    correct_galaxy('sdss', 2, n=3)
+    # correct_galaxy('hst', 26, n=3)
+    # correct_galaxy('sdss', 2, n=3)
+    correct_galaxy('hst_reduced', 26, n=3)
 
-    inspectSNOutsideGalaxy('hst')
-    inspectSNOutsideGalaxy('sdss', cutoff = 2)
+    # inspectSNOutsideGalaxy('hst')
+    # inspectSNOutsideGalaxy('sdss', cutoff = 2)
