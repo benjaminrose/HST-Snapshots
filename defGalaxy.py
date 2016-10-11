@@ -288,12 +288,15 @@ def main_hst(SNNumber = 2635, block_size=1, surfaceBrightness = 26, minArea=50, 
     f475 = fNu.to(u.erg / u.cm**2 / u.s / u.nm, equivalencies=u.spectral_density(475*u.nm))    #todo(maybe use the pivot wavelenght instead)
     f625 = fNu.to(u.erg / u.cm**2 / u.s / u.nm, equivalencies=u.spectral_density(625*u.nm))
     #this is the zero-mag flux combined like the data
-    fluxAB = f475 + f625
+    fluxAB = (f475 + f625)/2.0
     fluxThresh = fluxAB * 10**(magPerPixel/-2.5)
 
     #run sep
     #fix `minArea`
     minArea = minArea/block_size**2
+    #do not let the value go to less then 5 (default) because of block_size
+    if minArea < 5:
+        minArea = 5
     sources = run_sep(data, fluxThresh.value, minArea, deblendCont)
     # print('sources: ', sources[['npix', 'x', 'y', 'a', 'b', 'theta']])
 
@@ -472,6 +475,7 @@ if __name__ == "__main__":
     # map(main, names)
 
     # main_sdss(14284)
+    # map(main_hst, names)
     block_size = [8]*len(names)
     map(main_hst, names, block_size)
     # sigma = [3]*len(names)
