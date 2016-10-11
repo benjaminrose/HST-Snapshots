@@ -475,8 +475,8 @@ if __name__ == "__main__":
     # map(main, names)
 
     # main_sdss(14284)
-    # map(main_hst, names)
-    block_size = [8]*len(names)
-    map(main_hst, names, block_size)
+    map(main_hst, names)
+    # block_size = [8]*len(names)
+    # map(main_hst, names, block_size)
     # sigma = [3]*len(names)
     # map(main_sdss, names, sigma)
