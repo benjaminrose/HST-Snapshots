@@ -96,7 +96,7 @@ def main(show=True, zeros=False):
     #read documentation of `collect_data()` to explain slicing.
     hst = hst[1:]
     fpr_hst = np.array(hst[:,1], dtype=np.float)
-    fpr_hst.sort()
+    # fpr_hst.sort()
     if not zeros:
         fpr_hst = fpr_hst[fpr_hst.nonzero()]
     cdf_hst = np.array(range(fpr_hst.size))/(fpr_hst.size-1)
@@ -106,7 +106,7 @@ def main(show=True, zeros=False):
     #read documentation of `collect_data()` to explain slicing.
     hstReduced = hstReduced[1:]
     fpr_hstReduced = np.array(hstReduced[:,1], dtype=np.float)
-    fpr_hstReduced.sort()
+    # fpr_hstReduced.sort()
     if not zeros:
         fpr_hstReduced = fpr_hstReduced[fpr_hstReduced.nonzero()]
     cdf_hstReduced = np.array(range(fpr_hstReduced.size))/(fpr_hstReduced.size-1)
@@ -116,7 +116,7 @@ def main(show=True, zeros=False):
     #read documentation of `collect_data()` to explain slicing.
     sdss1 = sdss1[1:]
     fpr_sdss1 = np.array(sdss1[:,1], dtype=np.float)
-    fpr_sdss1.sort()
+    # fpr_sdss1.sort()
     if not zeros:
         fpr_sdss1 = fpr_sdss1[fpr_sdss1.nonzero()]
     cdf_sdss1 = np.array(range(fpr_sdss1.size))/(fpr_sdss1.size-1)
@@ -126,7 +126,7 @@ def main(show=True, zeros=False):
     #read documentation of `collect_data()` to explain slicing.
     sdss2 = sdss2[1:]
     fpr_sdss2 = np.array(sdss2[:,1], dtype=np.float)
-    fpr_sdss2.sort()
+    # fpr_sdss2.sort()
     if not zeros:
         fpr_sdss2 = fpr_sdss2[fpr_sdss2.nonzero()]
     cdf_sdss2 = np.array(range(fpr_sdss2.size))/(fpr_sdss2.size-1)
@@ -136,11 +136,22 @@ def main(show=True, zeros=False):
     #read documentation of `collect_data()` to explain slicing.
     sdss3 = sdss3[1:]
     fpr_sdss3 = np.array(sdss3[:,1], dtype=np.float)
-    fpr_sdss3.sort()
+    # fpr_sdss3.sort()
     if not zeros:
         fpr_sdss3 = fpr_sdss3[fpr_sdss3.nonzero()]
     cdf_sdss3 = np.array(range(fpr_sdss3.size))/(fpr_sdss3.size-1)
 
+    fpr_combined = fpr_hst.__deepcopy__('C')
+    for i, hst in enumerate(fpr_hst):
+        if hst == 0:
+            fpr_combined[i] = fpr_sdss1[i]
+
+    fpr_hst.sort()
+    fpr_hstReduced.sort()
+    fpr_sdss1.sort()
+    fpr_sdss2.sort()
+    fpr_sdss3.sort()
+    fpr_combined.sort()
 
     #plot images
 
@@ -175,6 +186,7 @@ def main(show=True, zeros=False):
     plt.plot(fpr_sdss3, cdf_sdss3, label=r'sdss, 3$\sigma$')
     plt.plot(fpr_hst, cdf_hst, label='hst')
     plt.plot(fpr_hstReduced, cdf_hstReduced, label='hst reduced')
+    plt.plot(fpr_combined, cdf_hstReduced, label='hst combined thing')
     plt.plot(fpr_referacne, cdf_referance, label=r'$\propto$ luminosity')
     plt.legend(loc=0)
     plt.xlabel('Fractional Pixel Rank')
